@@ -1,0 +1,12 @@
+/venv
+.venv
+*.pyc
+*.cfg
+__pycache__
+node_modules
+*.egg-*
+*.brython.js
+# .vscode
+.env*
+app.css
+!.env.example

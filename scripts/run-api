@@ -1,0 +1,5 @@
+#!/bin/sh -e
+# export APP_ENV=dev
+
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+APP_ENV=dev fastapi dev motegao/cmd/api.py

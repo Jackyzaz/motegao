@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # MongoDB Service
+  mongodb:
+    image: mongo
+    container_name: motegao-mongodb
+    env_file:
+      - .env
+    volumes:
+      - ../deployment/motegao/mongodb/data/db:/data/db
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+    restart: always
+    ports:
+      - 27017:27017
+    networks:
+      - default
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis/redis-stack-server
+    container_name: motegao-redis
+    env_file:
+      - .env
+    volumes:
+      - ../deployment/motegao/redis/data:/data
+    restart: always
+    ports:
+      - 6379:6379
+      - 8001:8001
+    networks:
+      - default
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+
+  # Python FastAPI Backend Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: motegao-api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=dev
+      - PYTHONUNBUFFERED=1
+      - MONGODB_URL=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/motegao?authSource=admin
+      - REDIS_URL=redis://redis:6379
+    command: fastapi dev motegao/cmd/api.py --host 0.0.0.0 --port 8000
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://api:8000/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Next.js Web App Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    env_file:
+      - .env
+    container_name: motegao-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://api:8000
+    depends_on:
+      - api
+    networks:
+      - default
+
+volumes:
+  mongodb_data:
+  mongodb_config:
+  redis_data:

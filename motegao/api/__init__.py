@@ -1,3 +1,4 @@
+from loguru import logger
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.exceptions import RequestValidationError
@@ -19,7 +20,15 @@ from motegao import models
 def create_application() -> FastAPI:
     settings = get_app_settings()
     settings.configure_logging()
-    application = FastAPI(lifespan=lifespan, **settings.fastapi_kwargs)
+
+    # Set root_path for reverse proxy with /api prefix
+    fastapi_kwargs = settings.fastapi_kwargs.copy()
+    if settings.API_PREFIX:
+        fastapi_kwargs["root_path"] = settings.API_PREFIX
+
+    application = FastAPI(lifespan=lifespan, **fastapi_kwargs)
+    logger.info("Starting application setup...")
+    logger.info(f"Application settings: {settings.dict()}")
 
     application.add_middleware(
         CORSMiddleware,

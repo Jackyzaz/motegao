@@ -1,5 +1,5 @@
-from motegao.celery_app import celery_app
-from motegao.tasks.commands import run_command_ping
+from motegao.celery.app import celery
+from motegao.celery.tasks.commands import run_command_ping
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/commands", tags=['commands'])
@@ -18,7 +18,7 @@ def ping(host: str):
 
 @router.get("/result/{task_id}")
 def get_task_result(task_id: str):
-    task = celery_app.AsyncResult(task_id)
+    task = celery.AsyncResult(task_id)
     return {
         "status": task.status,
         "result": task.result if task.ready() else None

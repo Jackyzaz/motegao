@@ -1,8 +1,8 @@
 from celery import Celery
 
-app = Celery(
+celery = Celery(
     "worker",
     broker="amqp://guest@localhost//",
-    # Add the path to your tasks module here
+    backend='rpc://',
     include=["motegao.celery.tasks.commands"],
 )

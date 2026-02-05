@@ -1,36 +1,72 @@
 "use client"
+import { useSession, signOut } from "next-auth/react"
 
 export default function Topbar() {
+  const { data: session } = useSession()
+
   return (
     <div style={{
-      height: 60,
-      background: "#15181d",
+      height: "60px",
+      backgroundColor: "#31363F",
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       padding: "0 20px",
-      borderBottom: "1px solid #31363F",
+      borderBottom: "2px solid #76ABAE"
     }}>
-      <select style={{ 
-        background: "#31363F", 
-        color: "#EEEEEE", 
-        border: "1px solid #76ABAE",
-        borderRadius: 4,
-        padding: "2px 8px"
-      }}>
-        <option>Project: Recon Alpha</option>
-      </select>
+      {/* ด้านซ้าย: ปุ่มเลือกโปรเจกต์ (รักษาไว้เหมือนเดิม) */}
+      <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+        <button style={{ 
+          background: "none", 
+          border: "1px solid #76ABAE", 
+          color: "#76ABAE", 
+          cursor: "pointer",
+          padding: "5px 10px",
+          borderRadius: "4px"
+        }}>
+          ☰ PROJECTS
+        </button>
+        <div style={{ fontWeight: "bold", color: "#EEEEEE" }}>
+          CYBER RECON
+        </div>
+      </div>
 
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <div style={{ color: "#76ABAE", fontSize: "14px" }}>Admin User</div>
-        <button style={{
-          background: "transparent",
-          color: "#EEEEEE",
-          border: "1px solid #76ABAE",
-          padding: "4px 12px",
-          borderRadius: 4,
-          cursor: "pointer"
-        }}>Logout</button>
+      {/* ด้านขวา: แสดงชื่อบัญชีจาก Google */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ textAlign: "right", color: "#EEEEEE" }}>
+          <div style={{ fontSize: "14px", fontWeight: "bold" }}>
+            {session?.user?.name || "Loading..."}
+          </div>
+          <div style={{ fontSize: "10px", color: "#76ABAE" }}>
+            {session?.user?.email}
+          </div>
+        </div>
+
+        {/* รูปโปรไฟล์ */}
+        {session?.user?.image && (
+          <img 
+            src={session.user.image} 
+            alt="User" 
+            style={{ width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #76ABAE" }} 
+          />
+        )}
+
+        <button 
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          style={{
+            marginLeft: "10px",
+            backgroundColor: "#76ABAE",
+            color: "#222831",
+            border: "none",
+            padding: "5px 12px",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "12px",
+            fontWeight: "bold"
+          }}
+        >
+          LOGOUT
+        </button>
       </div>
     </div>
   )

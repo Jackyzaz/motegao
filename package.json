@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "next-auth": "^4.24.13",
+    "reactflow": "^11.11.4"
+  }
+}

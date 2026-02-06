@@ -3,10 +3,11 @@ from motegao.celery.tasks.commands import (
     run_command_nmap,
     run_command_ping,
     run_command_subdomain_enum,
+    run_command_path_enum
 )
 from fastapi import APIRouter, HTTPException
 
-from motegao.models.cmd_request import NmapRequest, subdomainEnumRequest
+from motegao.models.cmd_request import NmapRequest, subdomainEnumRequest, PathEnumRequest
 
 router = APIRouter(prefix="/commands", tags=["commands"])
 
@@ -78,5 +79,12 @@ def nmap(payload: NmapRequest):
 def subdomain_enum(payload: subdomainEnumRequest):
     task = run_command_subdomain_enum.delay(
         payload.domain, payload.threads, payload.wordlist
+    )
+    return {"task_id": task.id}
+
+@router.post("/path_enum")
+def path_enum(payload: PathEnumRequest):
+    task = run_command_path_enum.delay(
+        payload.url, payload.threads, payload.wordlist, payload.exclude_status
     )
     return {"task_id": task.id}

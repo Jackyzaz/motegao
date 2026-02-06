@@ -1,27 +1,12 @@
+
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import api from '../lib/axios';
 
 export default function RegisterPage() {
-  const [formData, setFormData] = useState({ username: "", password: "", confirmPassword: "" });
-  const router = useRouter();
-
-  const handleRegister = (e) => {
-    e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      alert("ERROR: Passwords do not match!");
-      return;
-    }
-
-    // จำลองการบันทึกข้อมูลลง LocalStorage
-    const userData = { username: formData.username, password: formData.password };
-    localStorage.setItem("cyber_user", JSON.stringify(userData));
-    
-    alert("REGISTRATION COMPLETE: Identity created.");
-    router.push("/login");
-  };
-
+  // สร้าง State ให้ครบตามฟิลด์ใน Swagger
   const inputStyle = {
     width: "100%",
     padding: "12px",
@@ -34,34 +19,127 @@ export default function RegisterPage() {
     fontFamily: "monospace"
   };
 
+  const [formData, setFormData] = useState({
+    email: "",
+    username: "",
+    first_name: "",
+    last_name: "",
+    status: "active", // ค่า Default ตามที่คุณส่งมา
+    password: "",
+    confirm_password: ""
+  });
+
+  const router = useRouter();
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+
+    if (formData.password !== formData.confirm_password) {
+      alert("Passwords do not match!");
+      return;
+    }
+
+    try {
+      // 🎯 ส่งไปเฉพาะที่ Swagger บอกว่าต้องการเท่านั้น
+      const payload = {
+        email: formData.email,
+        username: formData.username,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        status: "active",
+        password: formData.password,
+        confirm_password: formData.confirm_password,
+      };
+
+      console.log("Sending Payload:", payload); // ลองดูใน Console ว่าข้อมูลสวยไหม
+
+      const response = await api.post('/users/create', payload);
+
+      if (response.status >= 200 && response.status < 300) {
+        alert("IDENTITY CREATED: สมัครสมาชิกสำเร็จ!");
+        router.push("/login");
+      }
+    } catch (error) {
+      // พิมพ์ error ออกมาทั้งก้อนเพื่อดูโครงสร้าง
+      console.log("Full Error Object:", error);
+
+      // ตรวจสอบว่ามีข้อมูลจาก Server ไหม
+      if (error.response) {
+        console.log("Server Response Data:", error.response.data);
+        alert(error.response.data?.detail || "Data format error from server");
+      } else {
+        // ถ้า error.response ไม่มีค่า อาจเป็นเพราะต่อเน็ตไม่ได้หรือ Server พัง
+        alert("Cannot connect to Server. Please check if FastAPI is running.");
+      }
+    }
+  };
+
+  // ฟังก์ชันช่วยอัปเดตค่าใน State
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   return (
-    <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#222831" }}>
-      <div style={{ width: 350, padding: 40, background: "#31363F", borderRadius: 8, border: "1px solid #76ABAE", textAlign: "center" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#222831", padding: "20px" }}>
+      <div style={{ width: 400, padding: 40, background: "#31363F", borderRadius: 8, border: "1px solid #76ABAE", textAlign: "center" }}>
         <h1 style={{ color: "#76ABAE", marginBottom: 10 }}>CREATE IDENTITY</h1>
         <p style={{ color: "#EEEEEE", fontSize: "11px", marginBottom: 25 }}>ENCRYPTING NEW USER DATA...</p>
-        
+
         <form onSubmit={handleRegister}>
-          <input 
-            placeholder="ASSIGN USERNAME" 
-            onChange={(e) => setFormData({...formData, username: e.target.value})}
-            style={inputStyle} 
+          {/* แถวที่ 1: Username & Email */}
+          <input
+            placeholder="ASSIGN USERNAME"
+            name="username"
+            onChange={handleChange}
+            style={inputStyle}
             required
           />
-          <input 
-            type="password" 
-            placeholder="SET ACCESS CODE" 
-            onChange={(e) => setFormData({...formData, password: e.target.value})}
-            style={{...inputStyle, border: "1px solid #76ABAE"}} 
+          <input
+            type="email"
+            placeholder="EMAIL ADDRESS"
+            name="email"
+            onChange={handleChange}
+            style={inputStyle}
             required
           />
-          <input 
-            type="password" 
-            placeholder="CONFIRM ACCESS CODE" 
-            onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-            style={{...inputStyle, border: "1px solid #76ABAE"}} 
+
+          {/* แถวที่ 2: First Name & Last Name (แบ่งครึ่งเพื่อให้ฟอร์มไม่ยาวเกินไป) */}
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input
+              placeholder="FIRST NAME"
+              name="first_name"
+              onChange={handleChange}
+              style={{ ...inputStyle, flex: 1 }}
+              required
+            />
+            <input
+              placeholder="LAST NAME"
+              name="last_name"
+              onChange={handleChange}
+              style={{ ...inputStyle, flex: 1 }}
+              required
+            />
+          </div>
+
+          {/* แถวที่ 3: Passwords */}
+          <input
+            type="password"
+            placeholder="SET ACCESS CODE"
+            name="password"
+            onChange={handleChange}
+            style={{ ...inputStyle, border: "1px solid #76ABAE" }}
             required
           />
-          <button style={{ width: "100%", padding: "12px", background: "#76ABAE", color: "#222831", border: "none", fontWeight: "bold", cursor: "pointer", marginTop: 10 }}>
+          <input
+            type="password"
+            placeholder="CONFIRM ACCESS CODE"
+            name="confirm_password"
+            onChange={handleChange}
+            style={{ ...inputStyle, border: "1px solid #76ABAE" }}
+            required
+          />
+
+          <button style={{ width: "100%", padding: "12px", background: "#76ABAE", color: "#222831", border: "none", fontWeight: "bold", cursor: "pointer", marginTop: 10, letterSpacing: "1px" }}>
             REGISTER AGENT
           </button>
         </form>

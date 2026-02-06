@@ -110,31 +110,28 @@ async def get_all(
 #
 #   return user
 
-# @router.post(
-#     "/create",
-#     # response_model=schemas.users.User, # บรรทัดนี้อาจจะเปิดหรือปิดไว้ก่อนก็ได้ถ้า schema ยังไม่เป๊ะ
-#     response_model_by_alias=False,
-# )
-# async def create(
-#     user_register: schemas.users.RegisteredUser,
-# ) -> typing.Any: # เปลี่ยน return type เป็น Any ชั่วคราวถ้า schemas.users.User มีปัญหา
-#     # เช็คว่ามี username นี้ใน MongoDB หรือยัง
-#     user = await models.users.User.find_one(
-#         models.users.User.username == user_register.username
-#     )
+@router.post(
+    "/create",
+    response_model_by_alias=False,
+)
+async def create(
+    user_register: schemas.users.RegisteredUser,
+):  # <--- ลบ -> typing.Any ออก
+    user = await models.users.User.find_one(
+        models.users.User.username == user_register.username
+    )
 
-#     if user:
-#         raise HTTPException(
-#             status_code=status.HTTP_409_CONFLICT,
-#             detail="This username already exists.",
-#         )
+    if user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This username already exists.",
+        )
 
-#     # สร้าง User ใหม่
-#     user = models.users.User(**user_register.dict())
-#     await user.set_password(user_register.password) # เข้ารหัสรหัสผ่าน
-#     await user.insert() # บันทึกลง MongoDB
+    user = models.users.User(**user_register.model_dump())
+    user.set_password(user_register.password)
+    await user.insert()
 
-#     return user
+    return user
 
 @router.put(
     "/{user_id}/change_password",

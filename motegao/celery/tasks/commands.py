@@ -51,7 +51,7 @@ def run_command_subdomain_enum(domain: str, threads: int = 10, wordlist: int = 1
     results = []
 
     for line_output in run_command_yielder(
-        ["gobuster", "dns", "-d", domain, "-w", wordlist_file, "-t", str(threads)]
+        ["gobuster", "dns", "-d", domain, "-w", wordlist_file, "-t", str(threads), "--no-error"]
     ):
         if "Progress" in line_output:
             progress = float(line_output.split()[-1].strip()[1:5])
@@ -87,7 +87,7 @@ def run_command_path_enum(url: str, threads: int = 10, wordlist: int = 1, exclud
     progress = 0.0
 
     for line_output in run_command_yielder(
-        ["gobuster", "dir", "-u", url, "-w", wordlist_file, "-t", str(threads), "-b", ",".join(map(str, exclude_status))]
+        ["gobuster", "dir", "-u", url, "-w", wordlist_file, "-t", str(threads), "-b", ",".join(map(str, exclude_status)), "--no-error"]
     ):
         if "===============================================================" in line_output:
             counter += 1
@@ -98,6 +98,7 @@ def run_command_path_enum(url: str, threads: int = 10, wordlist: int = 1, exclud
                 return {"error": error_msg}
 
             if "Progress" in line_output:
+                print(line_output)
                 progress = float(line_output.split()[-1].strip()[1:5])
             else:
                 if "/" in line_output:

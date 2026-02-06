@@ -1,8 +1,8 @@
 from motegao.celery.app import celery
-from motegao.celery.tasks.commands import run_command_nmap, run_command_ping
+from motegao.celery.tasks.commands import run_command_nmap, run_command_ping, run_command_subdomain_enum
 from fastapi import APIRouter, HTTPException
 
-from motegao.models.cmd_request import NmapRequest
+from motegao.models.cmd_request import NmapRequest, subdomainEnumRequest
 
 router = APIRouter(prefix="/commands", tags=['commands'])
 
@@ -19,9 +19,10 @@ ALLOWED_NMAP_OPTIONS = {
 @router.get("/result/{task_id}")
 def get_task_result(task_id: str):
     task = celery.AsyncResult(task_id)
+    
     return {
         "status": task.status,
-        "result": task.result if task.ready() else None
+        "result": task.result
     }
 
 @router.post("/ping")
@@ -69,4 +70,13 @@ def nmap(payload: NmapRequest):
         ports
     )
 
+    return {"task_id": task.id}
+
+@router.post("/subdomain_dns_enum")
+def subdomain_enum(payload: subdomainEnumRequest):
+    task = run_command_subdomain_enum.delay(
+        payload.domain,
+        payload.threads,
+        payload.wordlist
+    )
     return {"task_id": task.id}

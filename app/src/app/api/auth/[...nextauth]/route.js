@@ -16,30 +16,42 @@ const handler = NextAuth({
         password: { label: "Password", type: "password" },
         localData: { label: "LocalData", type: "text" } // เพิ่มช่องรับข้อมูล
       },
+      // ... ภายใน CredentialsProvider -> authorize ...
       async authorize(credentials) {
-        // 1. เช็ค Admin ปกติ (Hardcode)
-        if (credentials?.username === "admin" && credentials?.password === "123456") {
-          return { id: "admin", name: "System Admin", email: "admin@recon.local" };
-        }
+        // 1. เตรียมข้อมูลในรูปแบบ Form Urlencoded (ตามภาพ image_105cf8.png)
+        const formData = new URLSearchParams();
+        formData.append('grant_type', 'password'); // FastAPI OAuth2 ต้องการตัวนี้
+        formData.append('username', credentials.username);
+        formData.append('password', credentials.password);
+        formData.append('scope', '');
+        formData.append('client_id', '');
+        formData.append('client_secret', '');
 
-        // 2. เช็คจากข้อมูลที่ส่งมาจาก localStorage
-        if (credentials?.localData) {
-          const savedUser = JSON.parse(credentials.localData);
-
-          // ตรวจสอบว่า Username และ Password ตรงกับที่สมัครไว้ไหม
-          if (
-            credentials.username === savedUser.username &&
-            credentials.password === savedUser.password
-          ) {
-            return {
-              id: "local-" + savedUser.username,
-              name: savedUser.username, // ใช้ username เป็นชื่อโชว์ใน Topbar
-              email: "localuser@recon.internal"
-            };
+        // 2. ยิงไปที่ Path v1 (ตามที่ปรากฏใน Swagger)
+        const res = await fetch("http://127.0.0.1:8000/v1/auth/login", {
+          method: 'POST',
+          body: formData,
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json"
           }
+        });
+
+        const data = await res.json();
+
+        // 3. เช็ค Response (ตามภาพ image_105d34.png)
+        if (res.ok && data.access_token) {
+          // ล็อกอินสำเร็จ: ส่งข้อมูลไปเก็บใน Session
+          return {
+            id: credentials.username,
+            name: credentials.username,
+            email: credentials.username + "@motegao.local",
+            accessToken: data.access_token // เก็บ Token ไว้ใช้ดึงข้อมูลโปรเจกต์ในอนาคต
+          };
         }
 
-        return null; // ถ้าไม่ตรงเลย ให้ตก
+        // ถ้า Error (401 หรือ 422) ให้คืนค่า null เพื่อให้หน้า Login โชว์ Alert
+        return null;
       }
     }),
   ],

@@ -12,13 +12,14 @@ export default function Home() {
   // 2. ดึงสถานะการล็อกอินจาก NextAuth
   const { data: session, status } = useSession()
 
-  useEffect(() => {
-    // 3. เปลี่ยนจากการเช็ค localStorage เป็นเช็ค status จาก NextAuth
-    // ถ้าสถานะคือ "ไม่มีการเข้าสู่ระบบ" (unauthenticated) จริงๆ ถึงจะให้เด้งไปหน้า login
-    if (status === "unauthenticated") {
-      router.push("/login")
-    }
-  }, [status, router])
+// ใน app/page.js
+useEffect(() => {
+  if (status === "authenticated") {
+    router.push("/dashboard") // เปลี่ยนจากอยู่ที่เดิมให้ไปหน้า Dashboard
+  } else if (status === "unauthenticated") {
+    router.push("/login")
+  }
+}, [status])
 
   // 4. ระหว่างที่ status กำลังโหลด ("loading") ให้โชว์หน้าจอรอโหลดก่อน
   // ป้องกันไม่ให้หน้าขาวหรือเด้งไปมา

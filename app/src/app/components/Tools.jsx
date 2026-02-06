@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { UI_TASK_STATUS } from "@/app/lib/config"
 
 const MOCK_WORDLISTS = [
   { id: "top1000", name: "Top 1000 Subdomains" },
@@ -37,9 +38,9 @@ export default function Tools({ tools, enabledTools, onToggleTool, onRunTool, ru
 function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus }) {
   const [selectedWordlist, setSelectedWordlist] = useState(MOCK_WORDLISTS[0].id)
   
-  const isRunning = taskStatus?.status === 'running'
-  const isCompleted = taskStatus?.status === 'completed'
-  const isFailed = taskStatus?.status === 'failed'
+  const isRunning = taskStatus?.status === UI_TASK_STATUS.RUNNING
+  const isCompleted = taskStatus?.status === UI_TASK_STATUS.COMPLETED
+  const isFailed = taskStatus?.status === UI_TASK_STATUS.FAILED
 
   const handleRun = () => {
     if (!isEnabled || isRunning) return

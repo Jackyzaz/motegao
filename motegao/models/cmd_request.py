@@ -17,14 +17,6 @@ class subdomainEnumRequest(BaseModel):
     domain: str = Field(..., examples=["example.com"])
     threads: int = Field(10, ge=1, le=100)
     wordlist: int = Field(1, ge=1, le=3)
-    
-    @field_validator("domain")
-    @classmethod
-    def validate_domain(cls, v: str):
-        domain_regex = r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z]{2,})+$"
-        if not re.match(domain_regex, v):
-            raise ValueError("Invalid domain format")
-        return v.lower()
 
 class PathEnumRequest(BaseModel):
     url: str

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import api from '../lib/axios';
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");

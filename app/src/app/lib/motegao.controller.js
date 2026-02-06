@@ -2,17 +2,17 @@ import { useState, useCallback, useEffect } from "react"
 import { applyEdgeChanges, applyNodeChanges } from "reactflow"
 import api from "@/app/lib/axios"
 import { useModal } from "@/app/context/ModalContext"
-import { 
-  TASK_STATUS, 
-  UI_TASK_STATUS, 
-  TOOL_IDS, 
-  NODE_POSITIONS, 
+import {
+  TASK_STATUS,
+  UI_TASK_STATUS,
+  TOOL_IDS,
+  NODE_POSITIONS,
   NODE_STYLES,
   EDGE_STYLES,
   API_CONFIG
 } from "@/app/lib/config"
 
-export const useMotegaoController = () => {
+export const useMotegaoController = (projectId) => {
   const { showError, showInfo } = useModal()
   // State management
   const [domains, setDomains] = useState([]) // Array of all domains
@@ -36,12 +36,49 @@ export const useMotegaoController = () => {
     []
   )
 
+  // ----
+  useEffect(() => {
+    const loadProjectData = async () => {
+      // ✅ เช็คให้ชัวร์ว่ามี projectId ก่อนเรียก API
+      if (!projectId) return;
+
+      try {
+        const response = await api.get(`/projects/detail/${projectId}`);
+        if (response.data) {
+          // ถ้ามีข้อมูลใน DB ให้เอามาทับ Mock data
+          const { nodes: savedNodes, edges: savedEdges } = response.data;
+          if (savedNodes) setNodes(savedNodes);
+          if (savedEdges) setEdges(savedEdges);
+        }
+      } catch (error) {
+        // ถ้าหาไม่เจอ (404) หรือ Error อื่นๆ ให้ใช้ Mock data เดิม
+        console.warn("PROJECT_NOT_FOUND_IN_DB, USING_LOCAL_STATE");
+      }
+    };
+
+    loadProjectData();
+  }, [projectId]);
+
+  const saveToDatabase = useCallback(async (currentNodes, currentEdges) => {
+    if (!projectId) return;
+    try {
+      await api.put(`/projects/update/${projectId}`, {
+        nodes: currentNodes,
+        edges: currentEdges,
+        lastModified: new Date().toLocaleDateString()
+      });
+      console.log("DATABASE_SYNCHRONIZED");
+    } catch (error) {
+      console.error("AUTO_SAVE_ERROR:", error);
+    }
+  }, [projectId]);
+
   // Poll for task results
   useEffect(() => {
     const activeTasks = Object.entries(runningTasks).filter(
       ([_, task]) => task.status === UI_TASK_STATUS.RUNNING
     )
-    
+
     if (activeTasks.length === 0) return
 
     const interval = setInterval(async () => {
@@ -55,7 +92,7 @@ export const useMotegaoController = () => {
               ...prev,
               [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.COMPLETED, result }
             }))
-            
+
             updateNodesWithResults(toolId, result)
           } else if (status === TASK_STATUS.FAILURE) {
             setRunningTasks(prev => ({
@@ -75,7 +112,7 @@ export const useMotegaoController = () => {
   // Update graph nodes with scan results
   const updateNodesWithResults = useCallback((toolId, result) => {
     console.log(`Results for ${toolId}:`, result)
-    
+
     setScanResults({
       tool: toolId,
       result,
@@ -88,7 +125,7 @@ export const useMotegaoController = () => {
     if (toolId === TOOL_IDS.NMAP) {
       const isError = result.includes("Usage: nmap")
       const nodeId = `nmap-${Date.now()}`
-      
+
       if (isError) {
         newNode = {
           id: nodeId,
@@ -191,41 +228,43 @@ export const useMotegaoController = () => {
 
   // Domain handlers
   const handleAddDomain = useCallback(() => {
-    if (!newDomainInput.trim()) return
-    
-    const newDomain = {
-      id: Date.now(),
-      name: newDomainInput.trim(),
-      status: "active"
-    }
-    
-    // Add domain to domains array
-    setDomains(prev => [...prev, newDomain])
-    
-    // DON'T auto-select - user must click the node
-    setNewDomainInput("")
-    setShowDomainModal(false)
-    
-    // Calculate position for new domain node (arrange vertically with spacing)
-    const domainNodeId = `domain-${newDomain.id}`
-    const yPosition = domains.length * 200 // 200px vertical spacing between domains
-    
-    // Add domain node to graph
-    setNodes(prev => [
-      ...prev,
-      {
-        id: domainNodeId,
-        type: "input",
-        data: { 
-          label: `🎯 ${newDomain.name}`,
-          domainId: newDomain.id, // Store domain ID in node data
-          domainName: newDomain.name
-        },
-        position: { x: NODE_POSITIONS.DOMAIN.x, y: yPosition },
-        style: NODE_STYLES.DOMAIN,
-      }
-    ])
-  }, [newDomainInput, domains.length])
+    if (!newDomainInput.trim()) return;
+
+    const newDomainId = Date.now();
+    const domainNodeId = `domain-${newDomainId}`;
+    const yPosition = domains.length * 200;
+
+    // 1. สร้าง Object ของ Node ใหม่เตรียมไว้ตัวเดียว
+    const newNode = {
+      id: domainNodeId,
+      type: "input",
+      data: {
+        label: `🎯 ${newDomainInput.trim()}`,
+        domainId: newDomainId,
+        domainName: newDomainInput.trim()
+      },
+      position: { x: NODE_POSITIONS.DOMAIN.x, y: yPosition },
+      style: NODE_STYLES.DOMAIN,
+    };
+
+    // 2. อัปเดต Domains List
+    setDomains(prev => [...prev, { id: newDomainId, name: newDomainInput.trim(), status: "active" }]);
+
+    // 3. อัปเดต Nodes และสั่ง Save ในที่เดียว
+    setNodes(prev => {
+      const updatedNodes = [...prev, newNode];
+
+      // 🚀 สั่งเซฟลง Database ทันทีโดยใช้ค่าล่าสุดที่เพิ่งรวมเสร็จ
+      saveToDatabase(updatedNodes, edges);
+
+      return updatedNodes;
+    });
+
+    // 4. ล้างค่า Input และปิด Modal
+    setNewDomainInput("");
+    setShowDomainModal(false);
+
+  }, [newDomainInput, domains.length, edges, saveToDatabase]); // ✅ ถอด nodes ออกจาก dependency เพื่อลดการรันซ้ำโดยไม่จำเป็น
 
   const handleSelectDomain = useCallback((domain) => {
     setSelectedDomain(domain)
@@ -241,13 +280,13 @@ export const useMotegaoController = () => {
       if (domain) {
         setSelectedDomain(domain)
         setScanResults(null)
-        
+
         // Update node styles to show selection
         setNodes(prev => prev.map(n => {
           if (n.id.startsWith('domain-')) {
             return {
               ...n,
-              style: n.id === node.id 
+              style: n.id === node.id
                 ? { ...NODE_STYLES.DOMAIN, border: '3px solid #76ABAE', boxShadow: '0 0 10px #76ABAE' }
                 : NODE_STYLES.DOMAIN
             }
@@ -260,8 +299,8 @@ export const useMotegaoController = () => {
 
   // Tool handlers
   const handleToggleTool = useCallback((toolId) => {
-    setEnabledTools(prev => 
-      prev.includes(toolId) 
+    setEnabledTools(prev =>
+      prev.includes(toolId)
         ? prev.filter(id => id !== toolId)
         : [...prev, toolId]
     )
@@ -274,7 +313,7 @@ export const useMotegaoController = () => {
     }
 
     console.log(`Running ${toolId} with config:`, config)
-    
+
     setRunningTasks(prev => ({
       ...prev,
       [toolId]: { status: UI_TASK_STATUS.RUNNING, taskId: null }
@@ -282,7 +321,7 @@ export const useMotegaoController = () => {
 
     try {
       let response
-      
+
       switch (toolId) {
         case TOOL_IDS.SUBDOMAIN:
           // Map wordlist string to integer for backend API
@@ -297,7 +336,7 @@ export const useMotegaoController = () => {
             wordlist: wordlistMap[config.wordlist] || 1
           })
           break
-          
+
         case TOOL_IDS.NMAP:
           response = await api.post("/commands/nmap", {
             host: selectedDomain.name,
@@ -307,7 +346,7 @@ export const useMotegaoController = () => {
             ports_specific: [80, 443, 8080, 8443]
           })
           break
-          
+
         case TOOL_IDS.PATHFINDER:
           showInfo("Path finder API is not yet implemented. Coming soon!", "Feature Not Available")
           setRunningTasks(prev => {
@@ -316,7 +355,7 @@ export const useMotegaoController = () => {
             return newTasks
           })
           return
-          
+
         default:
           showError(`Tool ${toolId} is not yet implemented`, "Tool Not Available")
           setRunningTasks(prev => {
@@ -333,7 +372,7 @@ export const useMotegaoController = () => {
           [toolId]: { status: UI_TASK_STATUS.RUNNING, taskId: response.data.task_id }
         }))
       }
-      
+
     } catch (error) {
       console.error(`Error running ${toolId}:`, error)
       setRunningTasks(prev => ({
@@ -358,20 +397,20 @@ export const useMotegaoController = () => {
     nodes,
     edges,
     runningTasks,
-    
+
     // Setters
     setShowDomainModal,
     setNewDomainInput,
-    
+
     // Graph handlers
     onNodesChange,
     onEdgesChange,
     handleNodeClick,
-    
+
     // Domain handlers
     handleAddDomain,
     handleSelectDomain,
-    
+
     // Tool handlers
     handleToggleTool,
     handleRunTool,

@@ -4,75 +4,108 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Topbar from "../components/Topbar"
 import ProjectCard from "../components/ProjectCard"
+import api from "../lib/axios" // ✅ นำเข้า axios instance ของเรา
 
 export default function Dashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // โหลดโปรเจกต์จาก localStorage
+  // 1. โหลดโปรเจกต์จาก Database (FastAPI)
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login")
-    
-    const savedProjects = JSON.parse(localStorage.getItem("cyber_projects") || "[]")
-    setProjects(savedProjects)
-  }, [status, router])
+    if (status === "unauthenticated") {
+      router.push("/login")
+      return
+    }
 
-  const createNewProject = () => {
+    const fetchProjects = async () => {
+      if (status === "authenticated" && session?.user?.name) {
+        try {
+          setLoading(true)
+          // ✅ เรียก GET /v1/projects/{username}
+          const response = await api.get(`/projects/${session.user.name}`)
+          setProjects(response.data)
+        } catch (error) {
+          console.error("FAILED TO FETCH PROJECTS:", error)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchProjects()
+  }, [status, session, router])
+
+  // 2. สร้างโปรเจกต์ใหม่ลง Database
+  const createNewProject = async () => {
+    if (!session?.user?.name) return
+
     const newProj = {
-      id: Date.now(),
+      id: String(Date.now()), // ใช้ String เพื่อให้ MongoDB ทำงานง่าย
       name: `NEW_RECON_${Math.floor(Math.random() * 1000)}`,
       lastModified: new Date().toLocaleDateString(),
       nodes: [],
-      edges: []
+      edges: [],
+      owner: session.user.name // ✅ ระบุเจ้าของที่นี่
     }
-    const updated = [newProj, ...projects]
-    setProjects(updated)
-    localStorage.setItem("cyber_projects", JSON.stringify(updated))
-    
-    // หลังจากสร้างเสร็จ ให้โดดไปหน้า Canvas (ส่ง ID ไปด้วย)
-    router.push(`/canvas?id=${newProj.id}`)
+
+    try {
+      // ✅ ส่งข้อมูลไปที่ FastAPI: POST /v1/projects/create
+      const response = await api.post("/projects/create", newProj)
+      
+      if (response.status === 200 || response.status === 201) {
+        // อัปเดต State หน้าจอ และนำทางไปหน้า Canvas
+        setProjects([newProj, ...projects])
+        router.push(`/canvas?id=${newProj.id}`)
+      }
+    } catch (error) {
+      console.error("CREATE PROJECT ERROR:", error)
+      alert("FAILED TO INITIALIZE PROJECT IN DATABASE")
+    }
   }
 
-  if (status === "loading") return <div style={{color: "#76ABAE", textAlign: "center", marginTop: "20%"}}>LOADING DATABASE...</div>
+  // แสดงผลระหว่างรอ Session หรือโหลดข้อมูล
+  if (status === "loading" || (status === "authenticated" && loading)) {
+    return (
+      <div style={{ color: "#76ABAE", textAlign: "center", marginTop: "20%", fontFamily: "monospace" }}>
+        SYNCHRONIZING WITH DATABASE...
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#222831" }}>
       <Topbar />
       
       <div style={{ display: "flex", height: "calc(100vh - 60px)" }}>
-        {/* Sidebar ซ้ายมือแบบ Tinkercad */}
+        {/* Sidebar */}
         <div style={{ width: "240px", borderRight: "1px solid #31363F", padding: "20px", color: "#EEEEEE" }}>
-          <div style={{ marginBottom: "30px", fontSize: "12px", color: "#76ABAE", fontWeight: "bold" }}>MENU</div>
-          <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE" }}>🏠 Home</div>
-          <div style={{ marginBottom: "15px", cursor: "pointer" }}>📁 Your Designs</div>
-          <div style={{ marginBottom: "15px", cursor: "pointer" }}>📚 Tutorials</div>
+          <div style={{ marginBottom: "30px", fontSize: "12px", color: "#76ABAE", fontWeight: "bold" }}>SYSTEM MENU</div>
+          <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE" }}>🏠 Terminal Home</div>
+          <div style={{ marginBottom: "15px", cursor: "pointer" }}>📁 My Operations</div>
+          <div style={{ marginBottom: "15px", cursor: "pointer" }}>📚 Uplink Tutorials</div>
         </div>
 
-        {/* ส่วนแสดงโปรเจกต์ */}
+        {/* Content */}
         <div style={{ flex: 1, padding: "40px", overflowY: "auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
-            <h2 style={{ color: "#EEEEEE" }}>Your Designs</h2>
+            <h2 style={{ color: "#EEEEEE" }}>ACTIVE_DESIGNS: {session?.user?.name}</h2>
             <button 
               onClick={createNewProject}
               style={{
-                backgroundColor: "#76ABAE",
-                color: "#222831",
-                border: "none",
-                padding: "10px 20px",
-                borderRadius: "4px",
-                fontWeight: "bold",
-                cursor: "pointer"
+                backgroundColor: "#76ABAE", color: "#222831", border: "none",
+                padding: "10px 20px", borderRadius: "4px", fontWeight: "bold",
+                cursor: "pointer", boxShadow: "0 0 10px rgba(118, 171, 174, 0.3)"
               }}
             >
-              + Create New Project
+              + INITIALIZE NEW PROJECT
             </button>
           </div>
 
-          {/* Grid แสดงโปรเจกต์ */}
           <div style={{ 
             display: "grid", 
-            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", 
+            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", 
             gap: "20px" 
           }}>
             {projects.map(proj => (
@@ -83,9 +116,9 @@ export default function Dashboard() {
               />
             ))}
             
-            {projects.length === 0 && (
-              <div style={{ color: "#444", gridColumn: "1/-1", textAlign: "center", marginTop: "50px" }}>
-                NO DATA FOUND. INITIALIZE YOUR FIRST PROJECT.
+            {projects.length === 0 && !loading && (
+              <div style={{ color: "#444", gridColumn: "1/-1", textAlign: "center", marginTop: "50px", fontFamily: "monospace" }}>
+                [!] NO DATA FRAGMENTS FOUND. START A NEW SESSION.
               </div>
             )}
           </div>

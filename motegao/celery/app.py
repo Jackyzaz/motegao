@@ -8,3 +8,9 @@ celery = Celery(
     # Add the path to your tasks module here
     include=["motegao.celery.tasks.commands"],
 )
+
+# Windows compatibility: use thread pool instead of prefork
+celery.conf.update(
+    worker_pool='threads',
+    worker_prefetch_multiplier=1,
+)

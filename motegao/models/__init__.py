@@ -18,7 +18,7 @@ from pydantic_settings import BaseSettings
 
 
 class AppSettings(BaseSettings):
-    MONGODB_URI: str = "mongodb://host.docker.internal:27017/motgaodb"
+    MONGODB_URI: str = "mongodb://localhost:27017/motegaodb"
 
     class Config:
         env_file = ".env"

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+celery -A motegao.celery.app worker --loglevel=info

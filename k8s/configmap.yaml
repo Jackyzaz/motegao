@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: motegao-config
+  namespace: motegao-prod
+data:
+  APP_ENV: "prod"
+  NODE_ENV: "production"
+  MONGO_INITDB_DATABASE: "motegaodb"
+  MONGO_ROOT_USER: "admin"
+  RABBITMQ_DEFAULT_USER: "guest"
+  RABBITMQ_DEFAULT_PASS: "guest"
+  ALLOWED_HOSTS: '["*"]'

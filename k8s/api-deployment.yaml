@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: motegao-prod
+  labels:
+    app: api
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+        component: backend
+    spec:
+      containers:
+        - name: api
+          image: motegao-api:latest # Replace with your image registry
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: motegao-config
+                  key: APP_ENV
+            - name: MONGO_ROOT_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: motegao-config
+                  key: MONGO_ROOT_USER
+            - name: MONGO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: motegao-secrets
+                  key: MONGO_ROOT_PASSWORD
+            - name: MONGO_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: motegao-config
+                  key: MONGO_INITDB_DATABASE
+            - name: MONGODB_URI
+              value: "mongodb://$(MONGO_ROOT_USER):$(MONGO_ROOT_PASSWORD)@mongodb:27017/$(MONGO_DATABASE)?authSource=admin"
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+            - name: CELERY_BROKER_URL
+              value: "amqp://guest:guest@rabbitmq:5672//"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: motegao-secrets
+                  key: SECRET_KEY
+            - name: ALLOWED_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: motegao-config
+                  key: ALLOWED_HOSTS
+          livenessProbe:
+            httpGet:
+              path: /docs
+              port: 8000
+            initialDelaySeconds: 40
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /docs
+              port: 8000
+            initialDelaySeconds: 40
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: motegao-prod
+  labels:
+    app: api
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  selector:
+    app: api
+  type: ClusterIP

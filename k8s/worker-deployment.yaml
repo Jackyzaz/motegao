@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: motegao-prod
+  labels:
+    app: worker
+    component: celery-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+        component: celery-worker
+    spec:
+      containers:
+        - name: worker
+          image: motegao-api:latest # Replace with your image registry
+          imagePullPolicy: Always
+          command:
+            ["celery", "-A", "motegao.celery.app", "worker", "--loglevel=info"]
+          env:
+            - name: CELERY_BROKER_URL
+              value: "amqp://guest:guest@rabbitmq:5672//"
+            - name: MONGO_ROOT_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: motegao-config
+                  key: MONGO_ROOT_USER
+            - name: MONGO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: motegao-secrets
+                  key: MONGO_ROOT_PASSWORD
+            - name: MONGO_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: motegao-config
+                  key: MONGO_INITDB_DATABASE
+            - name: MONGODB_URI
+              value: "mongodb://$(MONGO_ROOT_USER):$(MONGO_ROOT_PASSWORD)@mongodb:27017/$(MONGO_DATABASE)?authSource=admin"
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"

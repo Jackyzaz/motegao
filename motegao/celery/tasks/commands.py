@@ -35,7 +35,7 @@ def run_command_subdomain_enum(domain: str, threads: int = 10, wordlist: int = 1
 
         run_command_subdomain_enum.backend.mark_as_started(
             run_command_subdomain_enum.request.id,
-            subdomain=results)
+            subdomains=results)
     
     return {"subdomains": results}
 

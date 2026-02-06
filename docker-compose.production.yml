@@ -50,7 +50,7 @@ services:
     container_name: motegao-api-prod
     restart: unless-stopped
     environment:
-      - ENV=production
+      - APP_ENV=prod
       - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-motegaodb}?authSource=admin
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//

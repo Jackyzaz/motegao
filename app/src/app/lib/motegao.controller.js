@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { applyEdgeChanges, applyNodeChanges } from "reactflow"
 import api from "@/app/lib/axios"
+import { useModal } from "@/app/context/ModalContext"
 import { 
   TASK_STATUS, 
   UI_TASK_STATUS, 
@@ -12,6 +13,7 @@ import {
 } from "@/app/lib/config"
 
 export const useMotegaoController = () => {
+  const { showError, showInfo } = useModal()
   // State management
   const [showDomainModal, setShowDomainModal] = useState(false)
   const [showInitialModal, setShowInitialModal] = useState(true)
@@ -235,7 +237,7 @@ export const useMotegaoController = () => {
 
   const handleRunTool = useCallback(async (toolId, config) => {
     if (!selectedDomain) {
-      alert("Please select a domain first")
+      showError("Please select a domain first", "No Domain Selected")
       return
     }
 
@@ -251,10 +253,16 @@ export const useMotegaoController = () => {
       
       switch (toolId) {
         case TOOL_IDS.SUBDOMAIN:
+          // Map wordlist string to integer for backend API
+          const wordlistMap = {
+            "top1000": 1,
+            "top5000": 2,
+            "top20000": 3
+          }
           response = await api.post("/commands/subdomain_dns_enum", {
             domain: selectedDomain.name,
             threads: 10,
-            wordlist: config.wordlist || "top1000"
+            wordlist: wordlistMap[config.wordlist] || 1
           })
           break
           
@@ -269,7 +277,7 @@ export const useMotegaoController = () => {
           break
           
         case TOOL_IDS.PATHFINDER:
-          alert("Path finder API not yet implemented")
+          showInfo("Path finder API is not yet implemented. Coming soon!", "Feature Not Available")
           setRunningTasks(prev => {
             const newTasks = { ...prev }
             delete newTasks[toolId]
@@ -278,7 +286,7 @@ export const useMotegaoController = () => {
           return
           
         default:
-          alert(`Tool ${toolId} not implemented`)
+          showError(`Tool ${toolId} is not yet implemented`, "Tool Not Available")
           setRunningTasks(prev => {
             const newTasks = { ...prev }
             delete newTasks[toolId]
@@ -300,9 +308,12 @@ export const useMotegaoController = () => {
         ...prev,
         [toolId]: { status: UI_TASK_STATUS.FAILED, error: error.message }
       }))
-      alert(`Failed to run ${toolId}: ${error.message}`)
+      showError(
+        `Failed to execute ${toolId}: ${error.response?.data?.detail || error.message}`,
+        "Execution Failed"
+      )
     }
-  }, [selectedDomain])
+  }, [selectedDomain, showError, showInfo])
 
   return {
     // State

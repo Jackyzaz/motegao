@@ -120,7 +120,7 @@ export default function Tools({
         </div>
       )}
       
-      {tools.map(tool => (
+      {tools?.map(tool => (
         <ToolBox 
           key={tool.id}
           tool={tool}

@@ -5,7 +5,7 @@ services:
     image: mongo:8.0
     env_file:
       - .env.production
-    container_name: motegao-mongodb-prod
+    container_name: motegao-mongodb-ssl
     restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
@@ -27,7 +27,7 @@ services:
     image: redis/redis-stack-server:latest
     env_file:
       - .env.production
-    container_name: motegao-redis-prod
+    container_name: motegao-redis-ssl
     restart: unless-stopped
     command: redis-server
     volumes:
@@ -47,10 +47,10 @@ services:
       dockerfile: motegao/Dockerfile
     env_file:
       - .env.production
-    container_name: motegao-api-prod
+    container_name: motegao-api-ssl
     restart: unless-stopped
     environment:
-      - APP_ENV=prod
+      - ENV=production
       - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-motegaodb}?authSource=admin
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
@@ -75,14 +75,14 @@ services:
       context: ./app
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://${SSL_DOMAIN}/api}
     env_file:
       - .env.production
-    container_name: motegao-app-prod
+    container_name: motegao-app-ssl
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost/api}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://${SSL_DOMAIN}/api}
     expose:
       - "3000"
     networks:
@@ -98,7 +98,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: motegao-rabbitmq-prod
+    container_name: motegao-rabbitmq-ssl
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: guest
@@ -120,7 +120,7 @@ services:
       dockerfile: motegao/Dockerfile
     env_file:
       - .env.production
-    container_name: motegao-worker-prod
+    container_name: motegao-worker-ssl
     restart: unless-stopped
     command: celery -A motegao.celery.app worker --loglevel=info
     environment:
@@ -132,23 +132,32 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: motegao-nginx-prod
+    container_name: motegao-nginx-ssl
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    environment:
+      - SSL_DOMAIN=${SSL_DOMAIN}
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx-ssl.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
     networks:
       - motegao-network
     depends_on:
       - api
       - app
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+
+  certbot:
+    image: certbot/certbot
+    container_name: motegao-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # Initial command to get certificate - replace email and domain vars
+    # Once you have certs, you might change this or just run it via docker compose run
+    command: certonly --webroot -w /var/www/certbot --force-renewal --email ${SSL_EMAIL} -d ${SSL_DOMAIN} --agree-tos --no-eff-email
 
 networks:
   motegao-network:

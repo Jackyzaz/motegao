@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ "$EUID" -ne 0 ]; then
+    echo "This script must be run as root (use sudo)"
+    exit 1
+fi
+
+if [ ! -d "/usr/share/wordlists" ]; then
+    mkdir -p /usr/share/wordlists
+    echo "Created directory: /usr/share/wordlists"
+else
+    echo "Directory already exists: /usr/share/wordlists"
+    cp ./wordlists/* /usr/share/wordlists/
+    echo "Copied wordlists to /usr/share/wordlists/"
+fi

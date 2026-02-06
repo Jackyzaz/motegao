@@ -1,7 +1,7 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
 
-export default function Topbar() {
+export default function Topbar({ selectedDomain, onOpenDomainModal }) {
   const { data: session } = useSession()
 
   return (
@@ -14,20 +14,23 @@ export default function Topbar() {
       padding: "0 20px",
       borderBottom: "2px solid #76ABAE"
     }}>
-      {/* ด้านซ้าย: ปุ่มเลือกโปรเจกต์ (รักษาไว้เหมือนเดิม) */}
+      {/* ด้านซ้าย: ปุ่มเลือกโดเมน */}
       <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-        <button style={{ 
-          background: "none", 
-          border: "1px solid #76ABAE", 
-          color: "#76ABAE", 
-          cursor: "pointer",
-          padding: "5px 10px",
-          borderRadius: "4px"
-        }}>
-          ☰ PROJECTS
+        <button 
+          onClick={onOpenDomainModal}
+          style={{ 
+            background: "none", 
+            border: "1px solid #76ABAE", 
+            color: "#76ABAE", 
+            cursor: "pointer",
+            padding: "5px 10px",
+            borderRadius: "4px"
+          }}
+        >
+          ☰ DOMAINS
         </button>
         <div style={{ fontWeight: "bold", color: "#EEEEEE" }}>
-          CYBER RECON
+          🎯 {selectedDomain?.name || "No domain selected"}
         </div>
       </div>
 

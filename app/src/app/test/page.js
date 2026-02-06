@@ -25,8 +25,8 @@ export default function TestPage() {
   
   // Use controller for all business logic
   const {
+    domains,
     showDomainModal,
-    showInitialModal,
     newDomainInput,
     selectedDomain,
     enabledTools,
@@ -38,6 +38,7 @@ export default function TestPage() {
     setNewDomainInput,
     onNodesChange,
     onEdgesChange,
+    handleNodeClick,
     handleAddDomain,
     handleSelectDomain,
     handleToggleTool,
@@ -78,6 +79,7 @@ export default function TestPage() {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onNodeClick={handleNodeClick}
             scanResults={scanResults}
           />
           <Tools 
@@ -86,37 +88,56 @@ export default function TestPage() {
             onToggleTool={handleToggleTool}
             onRunTool={handleRunTool}
             runningTasks={runningTasks}
+            domains={domains}
+            selectedDomain={selectedDomain}
+            onSelectDomain={handleSelectDomain}
+            onOpenAddDomainModal={() => setShowDomainModal(true)}
           />
         </div>
       </div>
 
-      {/* Initial Domain Input Modal */}
-      {showInitialModal && (
+      {/* Add Domain Modal */}
+      {showDomainModal && (
         <div style={{
           position: "fixed",
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.9)",
+          backgroundColor: "rgba(0, 0, 0, 0.8)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          zIndex: 2000
+          zIndex: 1000
         }}>
           <div style={{
             backgroundColor: "#31363F",
-            padding: "40px",
+            padding: "30px",
             borderRadius: "8px",
             border: "2px solid #76ABAE",
-            minWidth: "450px"
+            minWidth: "400px"
           }}>
-            <h2 style={{ color: "#76ABAE", marginBottom: "10px", fontSize: "24px" }}>
-              🎯 Welcome to Cyber Recon
-            </h2>
-            <p style={{ color: "#EEEEEE", marginBottom: "25px", opacity: 0.8 }}>
-              Enter a domain to start reconnaissance
-            </p>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "20px"
+            }}>
+              <h2 style={{ color: "#76ABAE", margin: 0 }}>Add Domain</h2>
+              <button
+                onClick={() => setShowDomainModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#76ABAE",
+                  fontSize: "24px",
+                  cursor: "pointer",
+                  padding: 0
+                }}
+              >
+                ×
+              </button>
+            </div>
             
             <input
               type="text"
@@ -137,7 +158,7 @@ export default function TestPage() {
                 outline: "none"
               }}
             />
-            
+
             <button
               onClick={handleAddDomain}
               disabled={!newDomainInput.trim()}
@@ -154,96 +175,7 @@ export default function TestPage() {
                 transition: "all 0.2s"
               }}
             >
-              Start Recon
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Domain Selection Modal */}
-      {showDomainModal && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.8)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: "#31363F",
-            padding: "30px",
-            borderRadius: "8px",
-            border: "2px solid #76ABAE",
-            minWidth: "400px",
-            maxHeight: "80vh",
-            overflow: "auto"
-          }}>
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "20px"
-            }}>
-              <h2 style={{ color: "#76ABAE", margin: 0 }}>Select Domain</h2>
-              <button
-                onClick={() => setShowDomainModal(false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#76ABAE",
-                  fontSize: "24px",
-                  cursor: "pointer",
-                  padding: 0
-                }}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {MOCK_DOMAINS.map(domain => (
-                <div
-                  key={domain.id}
-                  onClick={() => handleSelectDomain(domain)}
-                  style={{
-                    padding: "15px",
-                    backgroundColor: selectedDomain.id === domain.id ? "#76ABAE" : "#222831",
-                    color: selectedDomain.id === domain.id ? "#222831" : "#EEEEEE",
-                    border: "1px solid #76ABAE",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                >
-                  <div style={{ fontWeight: "bold", marginBottom: "5px" }}>
-                    {domain.name}
-                  </div>
-                  <div style={{ fontSize: "12px", opacity: 0.8 }}>
-                    Status: {domain.status}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              style={{
-                marginTop: "20px",
-                width: "100%",
-                padding: "10px",
-                backgroundColor: "#76ABAE",
-                color: "#222831",
-                border: "none",
-                borderRadius: "4px",
-                fontWeight: "bold",
-                cursor: "pointer"
-              }}
-            >
-              + Add New Domain
+              Add Domain
             </button>
           </div>
         </div>

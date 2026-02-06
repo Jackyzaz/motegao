@@ -7,7 +7,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
-export default function Canvas({ nodes, edges, onNodesChange, onEdgesChange, scanResults }) {
+export default function Canvas({ nodes, edges, onNodesChange, onEdgesChange, onNodeClick, scanResults }) {
   return (
     <div style={{ flex: 1, height: "100%", background: "#222831", position: "relative" }}>
       {/* Scan Results Indicator */}
@@ -45,6 +45,7 @@ export default function Canvas({ nodes, edges, onNodesChange, onEdgesChange, sca
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={onNodeClick}
         fitView
       >
         <Background color="#31363F" gap={20} variant="dots" />

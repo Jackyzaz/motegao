@@ -15,8 +15,8 @@ import {
 export const useMotegaoController = () => {
   const { showError, showInfo } = useModal()
   // State management
+  const [domains, setDomains] = useState([]) // Array of all domains
   const [showDomainModal, setShowDomainModal] = useState(false)
-  const [showInitialModal, setShowInitialModal] = useState(true)
   const [newDomainInput, setNewDomainInput] = useState("")
   const [selectedDomain, setSelectedDomain] = useState(null)
   const [enabledTools, setEnabledTools] = useState(["subdomain", "nmap"])
@@ -134,9 +134,10 @@ export const useMotegaoController = () => {
         }
       }
 
+      const domainNodeId = selectedDomain ? `domain-${selectedDomain.id}` : "1"
       newEdge = {
-        id: `e1-${nodeId}`,
-        source: "1",
+        id: `e-${domainNodeId}-${nodeId}`,
+        source: domainNodeId,
         target: nodeId,
         animated: true,
         style: isError ? EDGE_STYLES.ERROR : EDGE_STYLES.DEFAULT
@@ -170,9 +171,10 @@ export const useMotegaoController = () => {
         style: NODE_STYLES.RESULT,
       }
 
+      const domainNodeId = selectedDomain ? `domain-${selectedDomain.id}` : "1"
       newEdge = {
-        id: `e1-${nodeId}`,
-        source: "1",
+        id: `e-${domainNodeId}-${nodeId}`,
+        source: domainNodeId,
         target: nodeId,
         animated: true,
         style: EDGE_STYLES.DEFAULT
@@ -185,7 +187,7 @@ export const useMotegaoController = () => {
     if (newEdge) {
       setEdges(prev => [...prev, newEdge])
     }
-  }, [])
+  }, [selectedDomain])
 
   // Domain handlers
   const handleAddDomain = useCallback(() => {
@@ -197,34 +199,64 @@ export const useMotegaoController = () => {
       status: "active"
     }
     
-    setSelectedDomain(newDomain)
-    setShowInitialModal(false)
-    setNewDomainInput("")
+    // Add domain to domains array
+    setDomains(prev => [...prev, newDomain])
     
-    // Initialize graph with domain node
-    setNodes([
+    // DON'T auto-select - user must click the node
+    setNewDomainInput("")
+    setShowDomainModal(false)
+    
+    // Calculate position for new domain node (arrange vertically with spacing)
+    const domainNodeId = `domain-${newDomain.id}`
+    const yPosition = domains.length * 200 // 200px vertical spacing between domains
+    
+    // Add domain node to graph
+    setNodes(prev => [
+      ...prev,
       {
-        id: "1",
+        id: domainNodeId,
         type: "input",
-        data: { label: `🎯 ${newDomain.name}` },
-        position: NODE_POSITIONS.DOMAIN,
+        data: { 
+          label: `🎯 ${newDomain.name}`,
+          domainId: newDomain.id, // Store domain ID in node data
+          domainName: newDomain.name
+        },
+        position: { x: NODE_POSITIONS.DOMAIN.x, y: yPosition },
         style: NODE_STYLES.DOMAIN,
       }
     ])
-    setEdges([])
-  }, [newDomainInput])
+  }, [newDomainInput, domains.length])
 
   const handleSelectDomain = useCallback((domain) => {
     setSelectedDomain(domain)
-    setShowDomainModal(false)
     setScanResults(null)
-    
-    setNodes(nds => nds.map(node => 
-      node.id === "1" 
-        ? { ...node, data: { label: `🎯 ${domain.name}` } }
-        : node
-    ))
   }, [])
+
+  // Handle node click - if it's a domain node, select it
+  const handleNodeClick = useCallback((event, node) => {
+    // Check if this is a domain node
+    if (node.id.startsWith('domain-')) {
+      const domainId = node.data.domainId
+      const domain = domains.find(d => d.id === domainId)
+      if (domain) {
+        setSelectedDomain(domain)
+        setScanResults(null)
+        
+        // Update node styles to show selection
+        setNodes(prev => prev.map(n => {
+          if (n.id.startsWith('domain-')) {
+            return {
+              ...n,
+              style: n.id === node.id 
+                ? { ...NODE_STYLES.DOMAIN, border: '3px solid #76ABAE', boxShadow: '0 0 10px #76ABAE' }
+                : NODE_STYLES.DOMAIN
+            }
+          }
+          return n
+        }))
+      }
+    }
+  }, [domains])
 
   // Tool handlers
   const handleToggleTool = useCallback((toolId) => {
@@ -317,8 +349,8 @@ export const useMotegaoController = () => {
 
   return {
     // State
+    domains,
     showDomainModal,
-    showInitialModal,
     newDomainInput,
     selectedDomain,
     enabledTools,
@@ -334,6 +366,7 @@ export const useMotegaoController = () => {
     // Graph handlers
     onNodesChange,
     onEdgesChange,
+    handleNodeClick,
     
     // Domain handlers
     handleAddDomain,

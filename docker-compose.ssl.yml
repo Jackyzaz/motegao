@@ -1,0 +1,174 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:8.0
+    env_file:
+      - .env.production
+    container_name: motegao-mongodb-ssl
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-motegaodb}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - motegao-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  redis:
+    image: redis/redis-stack-server:latest
+    env_file:
+      - .env.production
+    container_name: motegao-redis-ssl
+    restart: unless-stopped
+    command: redis-server
+    volumes:
+      - redis_data:/data
+    networks:
+      - motegao-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: motegao/Dockerfile
+    env_file:
+      - .env.production
+    container_name: motegao-api-ssl
+    restart: unless-stopped
+    environment:
+      - ENV=production
+      - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-motegaodb}?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=["*"]
+    expose:
+      - "8000"
+    networks:
+      - motegao-network
+    depends_on:
+      - mongodb
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://${SSL_DOMAIN}/api}
+    env_file:
+      - .env.production
+    container_name: motegao-app-ssl
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://${SSL_DOMAIN}/api}
+    expose:
+      - "3000"
+    networks:
+      - motegao-network
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: motegao-rabbitmq-ssl
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - motegao-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    build:
+      context: .
+      dockerfile: motegao/Dockerfile
+    env_file:
+      - .env.production
+    container_name: motegao-worker-ssl
+    restart: unless-stopped
+    command: celery -A motegao.celery.app worker --loglevel=info
+    environment:
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+    networks:
+      - motegao-network
+    depends_on:
+      - rabbitmq
+
+  nginx:
+    image: nginx:alpine
+    container_name: motegao-nginx-ssl
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - SSL_DOMAIN=${SSL_DOMAIN}
+    volumes:
+      - ./nginx-ssl.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    networks:
+      - motegao-network
+    depends_on:
+      - api
+      - app
+
+  certbot:
+    image: certbot/certbot
+    container_name: motegao-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    # Initial command to get certificate - replace email and domain vars
+    # Once you have certs, you might change this or just run it via docker compose run
+    command: certonly --webroot -w /var/www/certbot --force-renewal --email ${SSL_EMAIL} -d ${SSL_DOMAIN} --agree-tos --no-eff-email
+
+networks:
+  motegao-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local

@@ -27,7 +27,7 @@ export default function Topbar() {
           ☰ PROJECTS
         </button>
         <div style={{ fontWeight: "bold", color: "#EEEEEE" }}>
-          CYBER RECON
+          MOTEGAO
         </div>
       </div>
 

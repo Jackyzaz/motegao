@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+
 class NmapRequest(BaseModel):
     host: str
     timing_template: int = Field(3, ge=0, le=5)
@@ -8,6 +9,7 @@ class NmapRequest(BaseModel):
     all_ports: bool = False
     ports_range: Optional[List[int]] = None
     ports_specific: Optional[List[int]] = None
+
 
 class subdomainEnumRequest(BaseModel):
     domain: str

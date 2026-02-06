@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import axios from "axios"; // 👈 เพิ่มการ import axios
 
 const handler = NextAuth({
   providers: [
@@ -8,54 +9,72 @@ const handler = NextAuth({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
-    // ... (ส่วน GoogleProvider) ...
     CredentialsProvider({
       name: "Credentials",
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
-        localData: { label: "LocalData", type: "text" } // เพิ่มช่องรับข้อมูล
       },
-      // ... ภายใน CredentialsProvider -> authorize ...
       async authorize(credentials) {
-        // 1. เตรียมข้อมูลในรูปแบบ Form Urlencoded (ตามภาพ image_105cf8.png)
-        const formData = new URLSearchParams();
-        formData.append('grant_type', 'password'); // FastAPI OAuth2 ต้องการตัวนี้
-        formData.append('username', credentials.username);
-        formData.append('password', credentials.password);
-        formData.append('scope', '');
-        formData.append('client_id', '');
-        formData.append('client_secret', '');
+        try {
+          // 1. เตรียมข้อมูลในรูปแบบ Form Urlencoded สำหรับ FastAPI
+          const formData = new URLSearchParams();
+          formData.append('grant_type', 'password');
+          formData.append('username', credentials.username);
+          formData.append('password', credentials.password);
+          formData.append('scope', '');
+          formData.append('client_id', '');
+          formData.append('client_secret', '');
 
-        // 2. ยิงไปที่ Path v1 (ตามที่ปรากฏใน Swagger)
-        const res = await fetch("http://127.0.0.1:8000/v1/auth/login", {
-          method: 'POST',
-          body: formData,
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json"
+          // 2. ยิงไปที่ FastAPI ด้วย Axios
+          const response = await axios.post("http://127.0.0.1:8000/v1/auth/login", formData, {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              "Accept": "application/json"
+            }
+          });
+
+          // Axios จะเก็บข้อมูลไว้ใน propertyชื่อ data โดยอัตโนมัติ
+          const data = response.data;
+
+          // 3. เช็ค Response ถ้าสำเร็จจะได้ access_token มา
+          if (response.status === 200 && data.access_token) {
+            return {
+              id: credentials.username,
+              name: credentials.username,
+              email: credentials.username + "@motegao.local",
+              accessToken: data.access_token
+            };
           }
-        });
-
-        const data = await res.json();
-
-        // 3. เช็ค Response (ตามภาพ image_105d34.png)
-        if (res.ok && data.access_token) {
-          // ล็อกอินสำเร็จ: ส่งข้อมูลไปเก็บใน Session
-          return {
-            id: credentials.username,
-            name: credentials.username,
-            email: credentials.username + "@motegao.local",
-            accessToken: data.access_token // เก็บ Token ไว้ใช้ดึงข้อมูลโปรเจกต์ในอนาคต
-          };
+        } catch (error) {
+          // ถ้า Axios เจอ Error (เช่น 401) จะตกลงมาที่นี่
+          console.error("Auth Error:", error.response?.data || error.message);
+          return null;
         }
-
-        // ถ้า Error (401 หรือ 422) ให้คืนค่า null เพื่อให้หน้า Login โชว์ Alert
         return null;
       }
     }),
   ],
-  // ... callbacks และ pages เหมือนเดิม ...
+  // เพิ่ม callbacks เพื่อให้สามารถนำ accessToken ไปใช้ในหน้าอื่นๆ ได้
+callbacks: {
+    async jwt({ token, user, account }) {
+      // ถ้าเป็นการ Login ครั้งแรก
+      if (user) {
+        token.accessToken = user.accessToken; // สำหรับ Credentials
+        token.provider = account?.provider;    // เก็บไว้ดูว่ามาจาก google หรือ credentials
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      // ส่งข้อมูลไปที่หน้าบ้าน (Frontend)
+      session.accessToken = token.accessToken;
+      session.user.provider = token.provider;
+      return session;
+    }
+  },
+  pages: {
+    signIn: '/login',
+  }
 });
 
 export { handler as GET, handler as POST };

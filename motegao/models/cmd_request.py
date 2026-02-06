@@ -1,4 +1,4 @@
-import re
+from fastapi import HTTPException
 from urllib.parse import urlparse
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
@@ -29,9 +29,15 @@ class PathEnumRequest(BaseModel):
     def validate_url(cls, v: str):
         parsed = urlparse(v)
         if parsed.scheme not in ("http", "https"):
-            raise ValueError("URL must start with http:// or https://")
+            raise HTTPException(
+                status_code=400,
+                detail="URL must start with http:// or https://",
+            )
         if not parsed.netloc:
-            raise ValueError("Invalid URL")
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid URL",
+            )
         return v
     
     @field_validator("exclude_status")
@@ -39,5 +45,8 @@ class PathEnumRequest(BaseModel):
     def validate_status_codes(cls, v: List[int]):
         for code in v:
             if code < 100 or code > 599:
-                raise ValueError(f"Invalid HTTP status code: {code}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid HTTP status code: {code}",
+                )
         return v

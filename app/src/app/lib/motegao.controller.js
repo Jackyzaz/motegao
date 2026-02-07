@@ -371,11 +371,18 @@ export const useMotegaoController = (projectId) => {
           }
           
           const protocol = config.protocol || "https"
-          response = await api.post("/commands/path_enum", {
+          const pathfinderPayload = {
             url: `${protocol}://${selectedDomain.name}`,
             threads: config.threads || 1,
             wordlist: pathfinderWordlistMap[config.wordlist] || 1
-          })
+          }
+          
+          // Add exclude_status if provided
+          if (config.exclude_status && config.exclude_status.length > 0) {
+            pathfinderPayload.exclude_status = config.exclude_status
+          }
+          
+          response = await api.post("/commands/path_enum", pathfinderPayload)
           break
 
         default:

@@ -150,6 +150,7 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
   const [scanAllPorts, setScanAllPorts] = useState(false)
   const [timingTemplate, setTimingTemplate] = useState(3)
   const [protocol, setProtocol] = useState("https")
+  const [excludeStatus, setExcludeStatus] = useState("")
   
   const isRunning = taskStatus?.status === UI_TASK_STATUS.RUNNING
   const isCompleted = taskStatus?.status === UI_TASK_STATUS.COMPLETED
@@ -162,7 +163,11 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
     } else if (tool.id === "subdomain") {
       onRun({ wordlist: selectedWordlist, threads })
     } else if (tool.id === "pathfinder") {
-      onRun({ wordlist: selectedWordlist, threads, protocol })
+      const statusCodes = excludeStatus
+        .split(",")
+        .map(s => parseInt(s.trim()))
+        .filter(n => !isNaN(n))
+      onRun({ wordlist: selectedWordlist, threads, protocol, exclude_status: statusCodes })
     }
   }
 
@@ -359,6 +364,36 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
             <option value="http">HTTP</option>
             <option value="https">HTTPS</option>
           </select>
+        </div>
+      )}
+
+      {tool.id === "pathfinder" && (
+        <div style={{ 
+          marginBottom: 12, 
+          color: "#76ABAE", 
+          fontSize: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px"
+        }}>
+          <span>Exclude Status Codes:</span>
+          <input
+            type="text"
+            placeholder="e.g., 404,403,401"
+            value={excludeStatus}
+            onChange={(e) => setExcludeStatus(e.target.value)}
+            disabled={!isEnabled || isRunning || disabled}
+            style={{ 
+              background: "#31363F", 
+              color: "#EEEEEE", 
+              border: "1px solid #76ABAE",
+              padding: "6px",
+              borderRadius: "4px",
+              width: "100%",
+              cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed",
+              fontSize: "12px"
+            }}
+          />
         </div>
       )}
 

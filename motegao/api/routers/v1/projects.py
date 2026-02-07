@@ -4,7 +4,7 @@ from typing import List
 # ✅ Import Project มาจากที่เดียว และใช้ชื่อนี้ตลอดทั้งไฟล์
 from motegao.models.projects import Project 
 
-router = APIRouter()
+router = APIRouter(prefix="/projects", tags=["Projects"])
 
 @router.post("/create")
 async def create_project(project: ProjectSchema):

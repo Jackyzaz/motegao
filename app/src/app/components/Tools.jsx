@@ -1,11 +1,18 @@
 import { useState } from "react"
 import { UI_TASK_STATUS } from "@/app/lib/config"
 
-const MOCK_WORDLISTS = [
-  { id: "top1000", name: "Top 1000 Subdomains" },
-  { id: "top5000", name: "Top 5000 Subdomains" },
-  { id: "top20000", name: "Top 20000 Subdomains" },
-  { id: "common-paths", name: "Common Paths" },
+const WORDLIST_SUDOMAINS = [
+  { id: "subdomains-5000", name: "subdomains-top1million-5000.txt" },
+  { id: "subdomains-20000", name: "subdomains-top1million-20000.txt" },
+  { id: "subdomains-110000", name: "subdomains-top1million-110000.txt" },
+]
+
+const WORDLIST_DIRECTORIES = [
+  { id: "dirb-1", name: "dirb-small.txt" },
+  { id: "dirb-2", name: "dirb-common.txt" },
+  { id: "dirb-3", name: "dirb-big.txt" },
+  { id: "dirb-4", name: "dirbuster-medium.txt" },
+  { id: "dirb-5", name: "dirbuster-big.txt" },
 ]
 
 export default function Tools({ 
@@ -136,8 +143,9 @@ export default function Tools({
 }
 
 function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = false }) {
-  const [selectedWordlist, setSelectedWordlist] = useState(MOCK_WORDLISTS[0].id)
-  
+  const wordlistOptions = tool.id === "subdomain" ? WORDLIST_SUDOMAINS : WORDLIST_DIRECTORIES
+
+  const [selectedWordlist, setSelectedWordlist] = useState(wordlistOptions[0]?.id || null)
   const isRunning = taskStatus?.status === UI_TASK_STATUS.RUNNING
   const isCompleted = taskStatus?.status === UI_TASK_STATUS.COMPLETED
   const isFailed = taskStatus?.status === UI_TASK_STATUS.FAILED
@@ -220,7 +228,7 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
           cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed"
         }}
       >
-        {MOCK_WORDLISTS.map(wordlist => (
+        {wordlistOptions.map(wordlist => (
           <option key={wordlist.id} value={wordlist.id}>
             {wordlist.name}
           </option>

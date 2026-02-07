@@ -333,10 +333,16 @@ export const useMotegaoController = (projectId) => {
         case TOOL_IDS.SUBDOMAIN:
           // Map wordlist string to integer for backend API
           const wordlistMap = {
-            "top1000": 1,
-            "top5000": 2,
-            "top20000": 3
+            "subdomains-5000": 1,
+            "subdomains-20000": 2,
+            "subdomains-110000": 3,
+            "dirb-1": 1,
+            "dirb-2": 2,
+            "dirb-3": 3,
+            "dirb-4": 4,
+            "dirb-5": 5
           }
+          
           response = await api.post("/commands/subdomain_dns_enum", {
             domain: selectedDomain.name,
             threads: 10,

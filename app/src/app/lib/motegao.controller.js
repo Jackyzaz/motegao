@@ -90,11 +90,9 @@ export const useMotegaoController = (projectId) => {
           if (status === TASK_STATUS.STARTED) {
             setRunningTasks(prev => ({
               ...prev,
-              [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.RUNNING, progress: result.progress || 0 }
+              [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.RUNNING, progress: (result && result.progress) || 0 }
             }))
-          } else
-
-          if (status === TASK_STATUS.SUCCESS) {
+          } else if (status === TASK_STATUS.SUCCESS) {
             setRunningTasks(prev => ({
               ...prev,
               [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.COMPLETED, result }
@@ -188,31 +186,44 @@ export const useMotegaoController = (projectId) => {
       }
     } else if (toolId === TOOL_IDS.SUBDOMAIN) {
       const nodeId = `subdomain-${Date.now()}`
-      const subdomains = Array.isArray(result) ? result : []
+      const subdomains = result.subdomains && Array.isArray(result.subdomains) ? result.subdomains : (Array.isArray(result) ? result : [])
 
       newNode = {
         id: nodeId,
         data: {
           label: (
             <div style={{ textAlign: "left", fontSize: "11px" }}>
-              <b style={{ color: "#76ABAE" }}>Subdomains Found</b>
+              <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Subdomains Found ({subdomains.length})</b>
               {subdomains.length > 0 ? (
-                subdomains.slice(0, 5).map((sub, i) => (
-                  <div key={i} style={{ color: "#50fa7b" }}>• {sub}</div>
-                ))
+                <table style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "10px",
+                  color: "#EEEEEE"
+                }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #76ABAE" }}>
+                      <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Subdomain</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subdomains.map((subdomain, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                        <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
+                          {subdomain}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <div style={{ color: "#EEEEEE" }}>No subdomains found</div>
-              )}
-              {subdomains.length > 5 && (
-                <div style={{ color: "#76ABAE", fontSize: "10px" }}>
-                  +{subdomains.length - 5} more
-                </div>
               )}
             </div>
           ),
         },
         position: NODE_POSITIONS.SUBDOMAIN,
-        style: NODE_STYLES.RESULT,
+        style: { ...NODE_STYLES.RESULT, width: 280 },
       }
 
       const domainNodeId = selectedDomain ? `domain-${selectedDomain.id}` : "1"
@@ -225,52 +236,71 @@ export const useMotegaoController = (projectId) => {
       }
     } else if (toolId === TOOL_IDS.PATHFINDER) {
       const nodeId = `pathfinder-${Date.now()}`
-      const paths = result.paths && Array.isArray(result.paths) ? result.paths : []
+      const isError = result.error && typeof result.error === "string"
+      const paths = !isError && result.paths && Array.isArray(result.paths) ? result.paths : []
 
-      newNode = {
-        id: nodeId,
-        data: {
-          label: (
-            <div style={{ textAlign: "left", fontSize: "11px" }}>
-              <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Paths Found ({paths.length})</b>
-              {paths.length > 0 ? (
-                <table style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: "10px",
-                  color: "#EEEEEE"
-                }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #76ABAE" }}>
-                      <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Path</th>
-                      <th style={{ padding: "4px", textAlign: "center", color: "#76ABAE", fontWeight: "bold" }}>Status</th>
-                      <th style={{ padding: "4px", textAlign: "right", color: "#76ABAE", fontWeight: "bold" }}>Size</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paths.map((pathItem, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
-                        <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
-                          {pathItem.path}
-                        </td>
-                        <td style={{ padding: "4px", textAlign: "center", color: "#EEEEEE" }}>
-                          {pathItem.status_code}
-                        </td>
-                        <td style={{ padding: "4px", textAlign: "right", color: "#EEEEEE" }}>
-                          {pathItem.size}
-                        </td>
+      if (isError) {
+        newNode = {
+          id: nodeId,
+          data: {
+            label: (
+              <div style={{ textAlign: "left", fontSize: "11px" }}>
+                <b style={{ color: "#76ABAE" }}>Pathfinder Error</b>
+                <div style={{ color: "#ff5555", fontSize: "10px", marginTop: "6px", wordBreak: "break-word" }}>
+                  {result.error}
+                </div>
+              </div>
+            ),
+          },
+          position: NODE_POSITIONS.SUBDOMAIN,
+          style: NODE_STYLES.ERROR,
+        }
+      } else {
+        newNode = {
+          id: nodeId,
+          data: {
+            label: (
+              <div style={{ textAlign: "left", fontSize: "11px" }}>
+                <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Paths Found ({paths.length})</b>
+                {paths.length > 0 ? (
+                  <table style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "10px",
+                    color: "#EEEEEE"
+                  }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #76ABAE" }}>
+                        <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Path</th>
+                        <th style={{ padding: "4px", textAlign: "center", color: "#76ABAE", fontWeight: "bold" }}>Status</th>
+                        <th style={{ padding: "4px", textAlign: "right", color: "#76ABAE", fontWeight: "bold" }}>Size</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div style={{ color: "#EEEEEE" }}>No paths found</div>
-              )}
-            </div>
-          ),
-        },
-        position: NODE_POSITIONS.SUBDOMAIN,
-        style: { ...NODE_STYLES.RESULT, width: 300 },
+                    </thead>
+                    <tbody>
+                      {paths.map((pathItem, i) => (
+                        <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                          <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
+                            {pathItem.path}
+                          </td>
+                          <td style={{ padding: "4px", textAlign: "center", color: "#EEEEEE" }}>
+                            {pathItem.status_code}
+                          </td>
+                          <td style={{ padding: "4px", textAlign: "right", color: "#EEEEEE" }}>
+                            {pathItem.size}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ color: "#EEEEEE" }}>No paths found</div>
+                )}
+              </div>
+            ),
+          },
+          position: NODE_POSITIONS.SUBDOMAIN,
+          style: { ...NODE_STYLES.RESULT, width: 300 },
+        }
       }
 
       const domainNodeId = selectedDomain ? `domain-${selectedDomain.id}` : "1"
@@ -279,7 +309,7 @@ export const useMotegaoController = (projectId) => {
         source: domainNodeId,
         target: nodeId,
         animated: true,
-        style: EDGE_STYLES.DEFAULT
+        style: isError ? EDGE_STYLES.ERROR : EDGE_STYLES.DEFAULT
       }
     }
 

@@ -147,6 +147,11 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
     onRun({ wordlist: selectedWordlist })
   }
 
+  const handleCancel = () => {
+    if (!isRunning) return
+    // onCancel() // Implement cancel logic if needed
+  }
+
   const getButtonText = () => {
     if (isRunning) return "Running..."
     if (isCompleted) return "✓ Completed"
@@ -240,6 +245,24 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
         {getButtonText()}
       </button>
 
+      <button 
+        onClick={handleRun}
+        disabled={!isEnabled || isRunning || disabled}
+        style={{ 
+          marginTop: "8px",
+          width: "100%",
+          background: "#ff5555", 
+          display: isRunning ? "block" : "none",
+          border: "none", 
+          padding: "8px", 
+          borderRadius: 4, 
+          fontWeight: "bold",
+          transition: "all 0.2s"
+        }}
+      >
+        Cancel
+      </button>
+
       {/* Show task info */}
       {taskStatus && (
         <div style={{
@@ -248,6 +271,7 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
           color: "#76ABAE",
           opacity: 0.8
         }}>
+          {isRunning && `Progress: ${taskStatus.progress || 0}% `}
           {isRunning && `Task ID: ${taskStatus.taskId?.substring(0, 8)}...`}
           {isFailed && `Error: ${taskStatus.error}`}
         </div>

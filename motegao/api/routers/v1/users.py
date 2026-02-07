@@ -256,3 +256,5 @@ async def set_role(
     await user.save()
 
     return user
+
+

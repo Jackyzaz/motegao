@@ -27,8 +27,16 @@ const handler = NextAuth({
           formData.append('client_secret', '');
 
           // 2. ยิงไปที่ FastAPI ด้วย Axios
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/v1';
-          const response = await axios.post(`${apiUrl}/auth/login`, formData, {
+          // const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/v1';
+          // const response = await axios.post(`${apiUrl}/auth/login`, formData, {
+          //   headers: {
+          //     "Content-Type": "application/x-www-form-urlencoded",
+          //     "Accept": "application/json"
+          //   }
+          // });
+
+          //test
+          const response = await axios.post(`http://127.0.0.1:8000/v1/auth/login`, formData, {
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",
               "Accept": "application/json"
@@ -57,7 +65,7 @@ const handler = NextAuth({
     }),
   ],
   // เพิ่ม callbacks เพื่อให้สามารถนำ accessToken ไปใช้ในหน้าอื่นๆ ได้
-callbacks: {
+  callbacks: {
     async jwt({ token, user, account }) {
       // ถ้าเป็นการ Login ครั้งแรก
       if (user) {

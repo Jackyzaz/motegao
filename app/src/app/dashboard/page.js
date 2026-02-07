@@ -24,7 +24,7 @@ export default function Dashboard() {
         try {
           setLoading(true)
           // ✅ เรียก GET /v1/projects/{username}
-          const response = await api.get(`/projects/${session.user.name}`)
+          const response = await api.get(`/v1/projects/${session.user.name}`)
           setProjects(response.data)
         } catch (error) {
           console.error("FAILED TO FETCH PROJECTS:", error)
@@ -52,8 +52,8 @@ export default function Dashboard() {
 
     try {
       // ✅ ส่งข้อมูลไปที่ FastAPI: POST /v1/projects/create
-      const response = await api.post("/projects/create", newProj)
-      
+      const response = await api.post("/v1/projects/create", newProj)
+
       if (response.status === 200 || response.status === 201) {
         // อัปเดต State หน้าจอ และนำทางไปหน้า Canvas
         setProjects([newProj, ...projects])
@@ -77,7 +77,7 @@ export default function Dashboard() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#222831" }}>
       <Topbar />
-      
+
       <div style={{ display: "flex", height: "calc(100vh - 60px)" }}>
         {/* Sidebar */}
         <div style={{ width: "240px", borderRight: "1px solid #31363F", padding: "20px", color: "#EEEEEE" }}>
@@ -91,7 +91,7 @@ export default function Dashboard() {
         <div style={{ flex: 1, padding: "40px", overflowY: "auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
             <h2 style={{ color: "#EEEEEE" }}>ACTIVE_DESIGNS: {session?.user?.name}</h2>
-            <button 
+            <button
               onClick={createNewProject}
               style={{
                 backgroundColor: "#76ABAE", color: "#222831", border: "none",
@@ -103,19 +103,23 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", 
-            gap: "20px" 
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+            gap: "20px"
           }}>
-            {projects.map(proj => (
-              <ProjectCard 
-                key={proj.id} 
-                project={proj} 
-                onClick={() => router.push(`/canvas?id=${proj.id}`)}
+           
+
+            {projects.map((proj, index) => (
+              <ProjectCard
+                // ✅ ลองใช้ id ถ้าไม่มีให้ใช้ _id ถ้าไม่มีจริงๆ ให้ใช้ index ของ loop
+                key={proj.id || proj._id || `proj-${index}`}
+                project={proj}
+                // ปรับจุด push URL ให้รองรับทั้ง id และ _id เผื่อกรณีข้อมูลเก่า
+                onClick={() => router.push(`/canvas?id=${proj.id || proj._id}`)}
               />
             ))}
-            
+
             {projects.length === 0 && !loading && (
               <div style={{ color: "#444", gridColumn: "1/-1", textAlign: "center", marginTop: "50px", fontFamily: "monospace" }}>
                 [!] NO DATA FRAGMENTS FOUND. START A NEW SESSION.

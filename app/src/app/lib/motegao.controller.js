@@ -84,7 +84,7 @@ export const useMotegaoController = (projectId) => {
     const interval = setInterval(async () => {
       for (const [toolId, task] of activeTasks) {
         try {
-          const response = await api.get(`/commands/result/${task.taskId}`)
+          const response = await api.get(`/commands/${task.taskId}/result`)
           const { status, result } = response.data
 
           if (status === TASK_STATUS.SUCCESS) {

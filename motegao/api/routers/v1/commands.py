@@ -22,11 +22,20 @@ ALLOWED_NMAP_OPTIONS = {
 }
 
 
-@router.get("/result/{task_id}")
+@router.get("/{task_id}/result")
 def get_task_result(task_id: str):
     task = celery.AsyncResult(task_id)
 
     return {"status": task.status, "result": task.result}
+
+@router.get("/{task_id}/cancel")
+def cancel_task(task_id: str):
+    task = celery.AsyncResult(task_id)
+    result = task.result
+    
+    celery.control.revoke(task_id, terminate=True, signal='SIGKILL')
+
+    return {"status": "CANCELLED", "result": result}
 
 
 @router.post("/ping")

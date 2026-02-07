@@ -13,5 +13,10 @@ class ProdAppSettings(AppSettings):
     REDOC_URL: str = "/redoc"
     OPENAPI_URL: str = "/openapi.json"
 
+    ALLOWED_HOSTS = [
+        "https://npspst.xyz",
+        "http://npspst.xyz",
+    ]
+
     class Config(AppSettings.Config):
-        env_file = "prod.env"
+        env_file = "../.env.production"

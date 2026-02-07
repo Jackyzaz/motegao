@@ -1,3 +1,4 @@
+from typing import List
 from motegao.api.core.settings.app import AppSettings
 
 
@@ -13,7 +14,7 @@ class ProdAppSettings(AppSettings):
     REDOC_URL: str = "/redoc"
     OPENAPI_URL: str = "/openapi.json"
 
-    ALLOWED_HOSTS = [
+    ALLOWED_HOSTS: List[str] = [
         "https://npspst.xyz",
         "http://npspst.xyz",
     ]

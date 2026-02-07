@@ -345,19 +345,24 @@ export const useMotegaoController = (projectId) => {
           
           response = await api.post("/commands/subdomain_dns_enum", {
             domain: selectedDomain.name,
-            threads: 10,
+            threads: config.threads || 1,
             wordlist: wordlistMap[config.wordlist] || 1
           })
           break
 
         case TOOL_IDS.NMAP:
-          response = await api.post("/commands/nmap", {
+          let nmapPayload = {
             host: selectedDomain.name,
-            timing_template: 4,
-            options: ["-sV"],
-            all_ports: false,
-            ports_specific: [80, 443, 8080, 8443]
-          })
+            timing_template: config.timing_template || 3,
+            options: ["-sV"]
+          }
+          
+          // Handle all ports flag - backend uses defaults when all_ports is not set
+          if (config.all_ports) {
+            nmapPayload.all_ports = true
+          }
+          
+          response = await api.post("/commands/nmap", nmapPayload)
           break
 
         case TOOL_IDS.PATHFINDER:

@@ -146,13 +146,21 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
   const wordlistOptions = tool.id === "subdomain" ? WORDLIST_SUDOMAINS : WORDLIST_DIRECTORIES
 
   const [selectedWordlist, setSelectedWordlist] = useState(wordlistOptions[0]?.id || null)
+  const [threads, setThreads] = useState(1)
+  const [scanAllPorts, setScanAllPorts] = useState(false)
+  const [timingTemplate, setTimingTemplate] = useState(3)
+  
   const isRunning = taskStatus?.status === UI_TASK_STATUS.RUNNING
   const isCompleted = taskStatus?.status === UI_TASK_STATUS.COMPLETED
   const isFailed = taskStatus?.status === UI_TASK_STATUS.FAILED
 
   const handleRun = () => {
     if (!isEnabled || isRunning || disabled) return
-    onRun({ wordlist: selectedWordlist })
+    if (tool.id === "nmap") {
+      onRun({ all_ports: scanAllPorts, timing_template: timingTemplate })
+    } else {
+      onRun({ wordlist: selectedWordlist, threads })
+    }
   }
 
   const handleCancel = () => {
@@ -213,27 +221,129 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
         </label>
       </div>
 
-      <select 
-        value={selectedWordlist}
-        onChange={(e) => setSelectedWordlist(e.target.value)}
-        disabled={!isEnabled || isRunning || disabled}
-        style={{ 
-          width: "100%", 
+      {tool.id === "subdomain" && (
+        <select 
+          value={selectedWordlist}
+          onChange={(e) => setSelectedWordlist(e.target.value)}
+          disabled={!isEnabled || isRunning || disabled}
+          style={{ 
+            width: "100%", 
+            marginBottom: 12, 
+            background: "#31363F", 
+            color: "#EEEEEE", 
+            border: "1px solid #76ABAE",
+            padding: "6px",
+            borderRadius: "4px",
+            cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed"
+          }}
+        >
+          {wordlistOptions.map(wordlist => (
+            <option key={wordlist.id} value={wordlist.id}>
+              {wordlist.name}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {tool.id === "subdomain" && (
+        <div style={{ 
           marginBottom: 12, 
-          background: "#31363F", 
-          color: "#EEEEEE", 
-          border: "1px solid #76ABAE",
-          padding: "6px",
+          color: "#76ABAE", 
+          fontSize: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px"
+        }}>
+          <span>Select Threads:</span>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={threads}
+            onChange={(e) => setThreads(Math.max(1, Math.min(100, e.target.value))) }
+            disabled={!isEnabled || isRunning || disabled}
+            style={{ 
+              background: "#31363F", 
+              color: "#EEEEEE", 
+              border: "1px solid #76ABAE",
+              padding: "6px",
+              borderRadius: "4px",
+              width: "100%",
+              cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed"
+            }}
+          />
+        </div>
+      )}
+
+      {tool.id === "nmap" && (
+        <label style={{ 
+          marginBottom: 12, 
+          color: "#76ABAE", 
+          fontSize: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed",
+          opacity: (isEnabled && !isRunning && !disabled) ? 1 : 0.6
+        }}>
+          <input
+            type="checkbox"
+            checked={scanAllPorts}
+            onChange={(e) => setScanAllPorts(e.target.checked)}
+            disabled={!isEnabled || isRunning || disabled}
+            style={{ cursor: "pointer" }}
+          />
+          <span>Scan All Ports</span>
+        </label>
+      )}
+
+      {tool.id === "nmap" && !scanAllPorts && (
+        <div style={{ 
+          marginBottom: 12, 
+          color: "#76ABAE", 
+          fontSize: "12px",
+          padding: "8px",
+          background: "#222831",
           borderRadius: "4px",
-          cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed"
-        }}
-      >
-        {wordlistOptions.map(wordlist => (
-          <option key={wordlist.id} value={wordlist.id}>
-            {wordlist.name}
-          </option>
-        ))}
-      </select>
+          border: "1px solid #76ABAE"
+        }}>
+          Using default ports
+        </div>
+      )}
+
+      {tool.id === "nmap" && (
+        <div style={{ 
+          marginBottom: 12, 
+          color: "#76ABAE", 
+          fontSize: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px"
+        }}>
+          <span>Timing Template:</span>
+          <select
+            value={timingTemplate}
+            onChange={(e) => setTimingTemplate(parseInt(e.target.value))}
+            disabled={!isEnabled || isRunning || disabled}
+            style={{ 
+              background: "#31363F", 
+              color: "#EEEEEE", 
+              border: "1px solid #76ABAE",
+              padding: "6px",
+              borderRadius: "4px",
+              width: "100%",
+              cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed"
+            }}
+          >
+            <option value={0}>Paranoid (0)</option>
+            <option value={1}>Sneaky (1)</option>
+            <option value={2}>Polite (2)</option>
+            <option value={3}>Normal (3)</option>
+            <option value={4}>Aggressive (4)</option>
+            <option value={5}>Insane (5)</option>
+          </select>
+        </div>
+      )}
 
       <button 
         onClick={handleRun}

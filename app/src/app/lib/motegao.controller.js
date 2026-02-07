@@ -223,6 +223,64 @@ export const useMotegaoController = (projectId) => {
         animated: true,
         style: EDGE_STYLES.DEFAULT
       }
+    } else if (toolId === TOOL_IDS.PATHFINDER) {
+      const nodeId = `pathfinder-${Date.now()}`
+      const paths = result.paths && Array.isArray(result.paths) ? result.paths : []
+
+      newNode = {
+        id: nodeId,
+        data: {
+          label: (
+            <div style={{ textAlign: "left", fontSize: "11px" }}>
+              <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Paths Found ({paths.length})</b>
+              {paths.length > 0 ? (
+                <table style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "10px",
+                  color: "#EEEEEE"
+                }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #76ABAE" }}>
+                      <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Path</th>
+                      <th style={{ padding: "4px", textAlign: "center", color: "#76ABAE", fontWeight: "bold" }}>Status</th>
+                      <th style={{ padding: "4px", textAlign: "right", color: "#76ABAE", fontWeight: "bold" }}>Size</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paths.map((pathItem, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                        <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
+                          {pathItem.path}
+                        </td>
+                        <td style={{ padding: "4px", textAlign: "center", color: "#EEEEEE" }}>
+                          {pathItem.status_code}
+                        </td>
+                        <td style={{ padding: "4px", textAlign: "right", color: "#EEEEEE" }}>
+                          {pathItem.size}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ color: "#EEEEEE" }}>No paths found</div>
+              )}
+            </div>
+          ),
+        },
+        position: NODE_POSITIONS.SUBDOMAIN,
+        style: { ...NODE_STYLES.RESULT, width: 300 },
+      }
+
+      const domainNodeId = selectedDomain ? `domain-${selectedDomain.id}` : "1"
+      newEdge = {
+        id: `e-${domainNodeId}-${nodeId}`,
+        source: domainNodeId,
+        target: nodeId,
+        animated: true,
+        style: EDGE_STYLES.DEFAULT
+      }
     }
 
     if (newNode) {

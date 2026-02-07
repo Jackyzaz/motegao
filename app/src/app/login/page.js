@@ -3,9 +3,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import api from '../lib/axios';
 
 export default function LoginPage() {
-    // 1. เพิ่ม State สำหรับเก็บทั้ง Username และ Password
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const router = useRouter();
@@ -13,26 +13,21 @@ export default function LoginPage() {
     const handleLogin = async (e) => {
         e.preventDefault();
 
-        // ดึงข้อมูล User ที่เคยสมัครไว้ในเครื่องนี้
-        const savedUser = JSON.parse(localStorage.getItem("cyber_user"));
-
-        // แปลง Object เป็น String เพื่อส่งข้ามไปฝั่ง Server
-        const userDataString = savedUser ? JSON.stringify(savedUser) : null;
-
+        // 🚀 ส่งข้อมูลไปให้ NextAuth (ซึ่งจะไปเรียก FastAPI ต่อ)
         const result = await signIn("credentials", {
             redirect: false,
             username: username,
             password: password,
-            // ✅ ส่งข้อมูลจาก localStorage แนบไปด้วยในชื่อ localData
-            localData: userDataString
         });
 
         if (result?.ok) {
             router.push("/");
         } else {
-            alert("ACCESS DENIED: Identity mismatch or User not found on this machine.");
+            // ดึงข้อความ Error มาโชว์ (ถ้ามี)
+            alert("ACCESS DENIED: Invalid Identity or Terminal Error.");
         }
     };
+
     const inputStyle = {
         width: "100%",
         padding: "12px",
@@ -52,12 +47,11 @@ export default function LoginPage() {
                 <p style={{ color: "#EEEEEE", fontSize: "12px", marginBottom: 30 }}>IDENTITY VERIFICATION REQUIRED</p>
 
                 <form onSubmit={handleLogin}>
-                    {/* แก้ไขช่อง Username ให้พิมพ์ได้ */}
                     <input
                         type="text"
                         placeholder="ENTER USERNAME"
                         value={username}
-                        onChange={(e) => setUsername(e.target.value)} // เก็บค่าลง state
+                        onChange={(e) => setUsername(e.target.value)}
                         style={inputStyle}
                     />
 
@@ -65,7 +59,7 @@ export default function LoginPage() {
                         type="password"
                         placeholder="ACCESS CODE"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)} // เก็บค่าลง state
+                        onChange={(e) => setPassword(e.target.value)}
                         style={{ ...inputStyle, border: "1px solid #76ABAE" }}
                     />
 
@@ -74,10 +68,10 @@ export default function LoginPage() {
                     </button>
                 </form>
 
+                {/* ... ส่วนของ Google Login และ Link ยังคงเดิม ... */}
                 <div style={{ margin: "20px 0", color: "#444" }}>OR</div>
-
                 <button
-                    onClick={() => signIn('google', { callbackUrl: '/' })} // เรียกใช้ Google Login
+                    onClick={() => signIn('google', { callbackUrl: '/' })}
                     style={{
                         width: "100%",
                         padding: "12px",
@@ -104,7 +98,6 @@ export default function LoginPage() {
                     </Link>
                 </div>
             </div>
-
         </div>
     );
 }

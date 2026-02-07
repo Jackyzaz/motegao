@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ssl
+  namespace: motegao-prod
+  labels:
+    app: nginx-ssl
+    component: proxy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-ssl
+  template:
+    metadata:
+      labels:
+        app: nginx-ssl
+        component: proxy
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+              name: http
+            - containerPort: 443
+              name: https
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+            - name: ssl-certs
+              mountPath: /etc/nginx/ssl
+              readOnly: true
+            - name: certbot-webroot
+              mountPath: /var/www/certbot
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-ssl-config
+        - name: ssl-certs
+          secret:
+            secretName: nginx-ssl-certs
+        - name: certbot-webroot
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-ssl
+  namespace: motegao-prod
+  labels:
+    app: nginx-ssl
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+    - port: 443
+      targetPort: 443
+      name: https
+  selector:
+    app: nginx-ssl

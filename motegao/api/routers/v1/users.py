@@ -110,6 +110,28 @@ async def get_all(
 #
 #   return user
 
+@router.post(
+    "/create",
+    response_model_by_alias=False,
+)
+async def create(
+    user_register: schemas.users.RegisteredUser,
+):  # <--- ลบ -> typing.Any ออก
+    user = await models.users.User.find_one(
+        models.users.User.username == user_register.username
+    )
+
+    if user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This username already exists.",
+        )
+
+    user = models.users.User(**user_register.model_dump())
+    user.set_password(user_register.password)
+    await user.insert()
+
+    return user
 
 @router.put(
     "/{user_id}/change_password",

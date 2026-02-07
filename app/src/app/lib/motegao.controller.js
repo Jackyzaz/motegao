@@ -335,12 +335,7 @@ export const useMotegaoController = (projectId) => {
           const wordlistMap = {
             "subdomains-5000": 1,
             "subdomains-20000": 2,
-            "subdomains-110000": 3,
-            "dirb-1": 1,
-            "dirb-2": 2,
-            "dirb-3": 3,
-            "dirb-4": 4,
-            "dirb-5": 5
+            "subdomains-110000": 3
           }
           
           response = await api.post("/commands/subdomain_dns_enum", {
@@ -366,13 +361,22 @@ export const useMotegaoController = (projectId) => {
           break
 
         case TOOL_IDS.PATHFINDER:
-          showInfo("Path finder API is not yet implemented. Coming soon!", "Feature Not Available")
-          setRunningTasks(prev => {
-            const newTasks = { ...prev }
-            delete newTasks[toolId]
-            return newTasks
+          // Map wordlist string to integer for backend API
+          const pathfinderWordlistMap = {
+            "dirb-1": 1,
+            "dirb-2": 2,
+            "dirb-3": 3,
+            "dirb-4": 4,
+            "dirb-5": 5
+          }
+          
+          const protocol = config.protocol || "https"
+          response = await api.post("/commands/path_enum", {
+            url: `${protocol}://${selectedDomain.name}`,
+            threads: config.threads || 1,
+            wordlist: pathfinderWordlistMap[config.wordlist] || 1
           })
-          return
+          break
 
         default:
           showError(`Tool ${toolId} is not yet implemented`, "Tool Not Available")

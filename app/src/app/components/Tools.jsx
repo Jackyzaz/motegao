@@ -149,6 +149,7 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
   const [threads, setThreads] = useState(1)
   const [scanAllPorts, setScanAllPorts] = useState(false)
   const [timingTemplate, setTimingTemplate] = useState(3)
+  const [protocol, setProtocol] = useState("https")
   
   const isRunning = taskStatus?.status === UI_TASK_STATUS.RUNNING
   const isCompleted = taskStatus?.status === UI_TASK_STATUS.COMPLETED
@@ -158,8 +159,10 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
     if (!isEnabled || isRunning || disabled) return
     if (tool.id === "nmap") {
       onRun({ all_ports: scanAllPorts, timing_template: timingTemplate })
-    } else {
+    } else if (tool.id === "subdomain") {
       onRun({ wordlist: selectedWordlist, threads })
+    } else if (tool.id === "pathfinder") {
+      onRun({ wordlist: selectedWordlist, threads, protocol })
     }
   }
 
@@ -272,6 +275,90 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
               cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed"
             }}
           />
+        </div>
+      )}
+
+      {tool.id === "pathfinder" && (
+        <select 
+          value={selectedWordlist}
+          onChange={(e) => setSelectedWordlist(e.target.value)}
+          disabled={!isEnabled || isRunning || disabled}
+          style={{ 
+            width: "100%", 
+            marginBottom: 12, 
+            background: "#31363F", 
+            color: "#EEEEEE", 
+            border: "1px solid #76ABAE",
+            padding: "6px",
+            borderRadius: "4px",
+            cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed"
+          }}
+        >
+          {wordlistOptions.map(wordlist => (
+            <option key={wordlist.id} value={wordlist.id}>
+              {wordlist.name}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {tool.id === "pathfinder" && (
+        <div style={{ 
+          marginBottom: 12, 
+          color: "#76ABAE", 
+          fontSize: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px"
+        }}>
+          <span>Select Threads:</span>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={threads}
+            onChange={(e) => setThreads(Math.max(1, Math.min(100, e.target.value))) }
+            disabled={!isEnabled || isRunning || disabled}
+            style={{ 
+              background: "#31363F", 
+              color: "#EEEEEE", 
+              border: "1px solid #76ABAE",
+              padding: "6px",
+              borderRadius: "4px",
+              width: "100%",
+              cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed"
+            }}
+          />
+        </div>
+      )}
+
+      {tool.id === "pathfinder" && (
+        <div style={{ 
+          marginBottom: 12, 
+          color: "#76ABAE", 
+          fontSize: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px"
+        }}>
+          <span>Protocol:</span>
+          <select
+            value={protocol}
+            onChange={(e) => setProtocol(e.target.value)}
+            disabled={!isEnabled || isRunning || disabled}
+            style={{ 
+              background: "#31363F", 
+              color: "#EEEEEE", 
+              border: "1px solid #76ABAE",
+              padding: "6px",
+              borderRadius: "4px",
+              width: "100%",
+              cursor: (isEnabled && !isRunning && !disabled) ? "pointer" : "not-allowed"
+            }}
+          >
+            <option value="http">HTTP</option>
+            <option value="https">HTTPS</option>
+          </select>
         </div>
       )}
 

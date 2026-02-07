@@ -26,22 +26,22 @@ const handler = NextAuth({
           formData.append('client_id', '');
           formData.append('client_secret', '');
 
-          // 2. ยิงไปที่ FastAPI ด้วย Axios
-          // const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/v1';
-          // const response = await axios.post(`${apiUrl}/auth/login`, formData, {
-          //   headers: {
-          //     "Content-Type": "application/x-www-form-urlencoded",
-          //     "Accept": "application/json"
-          //   }
-          // });
-
-          //test
-          const response = await axios.post(`http://127.0.0.1:8000/v1/auth/login`, formData, {
+          //2. ยิงไปที่ FastAPI ด้วย Axios
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/v1';
+          const response = await axios.post(`${apiUrl}/auth/login`, formData, {
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",
               "Accept": "application/json"
             }
           });
+
+          //test
+          // const response = await axios.post(`http://127.0.0.1:8000/v1/auth/login`, formData, {
+          //   headers: {
+          //     "Content-Type": "application/x-www-form-urlencoded",
+          //     "Accept": "application/json"
+          //   }
+          // });
 
           // Axios จะเก็บข้อมูลไว้ใน propertyชื่อ data โดยอัตโนมัติ
           const data = response.data;

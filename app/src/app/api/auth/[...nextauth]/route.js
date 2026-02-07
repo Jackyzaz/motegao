@@ -27,7 +27,8 @@ const handler = NextAuth({
           formData.append('client_secret', '');
 
           // 2. ยิงไปที่ FastAPI ด้วย Axios
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/v1';
+          // Use internal Docker network URL for server-side requests
+          const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/v1';
           const response = await axios.post(`${apiUrl}/auth/login`, formData, {
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",

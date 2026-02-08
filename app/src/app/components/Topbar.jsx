@@ -1,9 +1,10 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
+import { useRouter } from 'next/navigation';
 
 export default function Topbar({ selectedDomain, onOpenDomainModal }) {
   const { data: session } = useSession()
-
+  const router = useRouter();
   return (
     <div style={{
       height: "60px",
@@ -17,20 +18,20 @@ export default function Topbar({ selectedDomain, onOpenDomainModal }) {
       {/* ด้านซ้าย: ปุ่มเลือกโดเมน */}
       <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
         <button 
-          onClick={onOpenDomainModal}
+          onClick={() => router.push('/dashboard')}
           style={{ 
             background: "none", 
             border: "1px solid #76ABAE", 
-            color: "#76ABAE", 
+            color: "#EEEEEE", 
             cursor: "pointer",
             padding: "5px 10px",
             borderRadius: "4px"
           }}
         >
-          ☰ DOMAINS
+          🖧 MOTEGAO
         </button>
         <div style={{ fontWeight: "bold", color: "#EEEEEE" }}>
-          MOTEGAO
+          
         </div>
       </div>
 

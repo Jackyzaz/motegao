@@ -82,15 +82,15 @@ export default function Dashboard() {
         {/* Sidebar */}
         <div style={{ width: "240px", borderRight: "1px solid #31363F", padding: "20px", color: "#EEEEEE" }}>
           <div style={{ marginBottom: "30px", fontSize: "12px", color: "#76ABAE", fontWeight: "bold" }}>SYSTEM MENU</div>
-          <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE" }}>🏠 Terminal Home</div>
+          <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE" }}>🏠 Home</div>
           <div style={{ marginBottom: "15px", cursor: "pointer" }}>📁 My Operations</div>
-          <div style={{ marginBottom: "15px", cursor: "pointer" }}>📚 Uplink Tutorials</div>
+          <div style={{ marginBottom: "15px", cursor: "pointer" }}>⚙️ Settings</div>
         </div>
 
         {/* Content */}
         <div style={{ flex: 1, padding: "40px", overflowY: "auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
-            <h2 style={{ color: "#EEEEEE" }}>ACTIVE_DESIGNS: {session?.user?.name}</h2>
+            <h2 style={{ color: "#EEEEEE" }}>AGENT : {session?.user?.name}</h2>
             <button
               onClick={createNewProject}
               style={{
@@ -99,7 +99,7 @@ export default function Dashboard() {
                 cursor: "pointer", boxShadow: "0 0 10px rgba(118, 171, 174, 0.3)"
               }}
             >
-              + INITIALIZE NEW PROJECT
+              + NEW PROJECT
             </button>
           </div>
 

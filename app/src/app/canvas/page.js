@@ -9,14 +9,15 @@ import Tools from "@/app/components/Tools"
 import { useMotegaoController } from "@/app/lib/motegao.controller"
 
 export default function CanvasPage() {
-
-
     const { data: session, status } = useSession()
     const searchParams = useSearchParams()
-    const projectId = searchParams.get("id") // ✅ ดึง ID จาก URL ที่ Dashboard ส่งมา
+    const projectId = searchParams.get("id")
+
+    // ✅ เรียกใช้แค่ครั้งเดียว และเก็บใส่ตัวแปรไว้
     const controller = useMotegaoController(projectId);
+
+    // ✅ ดึงค่าออกมาจาก controller ตัวข้างบน
     const {
-        // ... ดึงตัวแปรจาก Controller เหมือนเดิม
         domains,
         showDomainModal,
         newDomainInput,
@@ -35,7 +36,7 @@ export default function CanvasPage() {
         handleSelectDomain,
         handleToggleTool,
         handleRunTool,
-    } = useMotegaoController()
+    } = controller;
 
     // 📡 ฟังก์ชันดึงข้อมูลโปรเจกต์จริงจาก Database
     useEffect(() => {

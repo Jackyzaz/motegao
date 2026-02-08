@@ -4,6 +4,7 @@ export const API_CONFIG = {
   pollInterval: 2000, // 2 seconds
 }
 
+
 // Celery Task Status
 export const TASK_STATUS = {
   PENDING: 'PENDING',

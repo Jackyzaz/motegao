@@ -63,7 +63,7 @@ export default function LoginPage() {
                         style={{ ...inputStyle, border: "1px solid #76ABAE" }}
                     />
 
-                    <button style={{ width: "100%", padding: "12px", background: "#76ABAE", color: "#222831", border: "none", fontWeight: "bold", cursor: "pointer", letterSpacing: "2px" }}>
+                    <button type="submit" style={{ width: "100%", padding: "12px", background: "#76ABAE", color: "#222831", border: "none", fontWeight: "bold", cursor: "pointer", letterSpacing: "2px" }}>
                         INITIALIZE AUTH
                     </button>
                 </form>

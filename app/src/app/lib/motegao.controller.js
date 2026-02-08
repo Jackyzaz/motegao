@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { applyEdgeChanges, applyNodeChanges } from "reactflow"
 import api from "@/app/lib/axios"
 import { useModal } from "@/app/context/ModalContext"
@@ -11,8 +11,15 @@ import {
   EDGE_STYLES,
   API_CONFIG
 } from "@/app/lib/config"
+import axios from "axios";
+
+const testApi = axios.create({
+  baseURL: 'http://localhost:8000'
+});
 
 export const useMotegaoController = (projectId) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const idRef = useRef(projectId);
   const { showError, showInfo } = useModal()
   // State management
   const [domains, setDomains] = useState([]) // Array of all domains
@@ -24,6 +31,7 @@ export const useMotegaoController = (projectId) => {
   const [nodes, setNodes] = useState([])
   const [edges, setEdges] = useState([])
   const [runningTasks, setRunningTasks] = useState({})
+
 
   // Graph handlers
   const onNodesChange = useCallback(
@@ -37,41 +45,57 @@ export const useMotegaoController = (projectId) => {
   )
 
   // ----
+
+  // อัปเดต Ref ทุกครั้งที่ projectId เปลี่ยน
   useEffect(() => {
-    const loadProjectData = async () => {
-      // ✅ เช็คให้ชัวร์ว่ามี projectId ก่อนเรียก API
-      if (!projectId) return;
-
-      try {
-        const response = await api.get(`/projects/detail/${projectId}`);
-        if (response.data) {
-          // ถ้ามีข้อมูลใน DB ให้เอามาทับ Mock data
-          const { nodes: savedNodes, edges: savedEdges } = response.data;
-          if (savedNodes) setNodes(savedNodes);
-          if (savedEdges) setEdges(savedEdges);
-        }
-      } catch (error) {
-        // ถ้าหาไม่เจอ (404) หรือ Error อื่นๆ ให้ใช้ Mock data เดิม
-        console.warn("PROJECT_NOT_FOUND_IN_DB, USING_LOCAL_STATE");
-      }
-    };
-
-    loadProjectData();
+    idRef.current = projectId;
   }, [projectId]);
 
-  const saveToDatabase = useCallback(async (currentNodes, currentEdges) => {
+  useEffect(() => {
+  const loadProjectData = async () => {
     if (!projectId) return;
     try {
-      await api.put(`/projects/update/${projectId}`, {
+      const response = await testApi.get(`/v1/projects/${projectId}`);
+      console.log("DEBUG_RAW_RESPONSE:", response.data);
+      if (response.data) {
+        // อัปเดตข้อมูล
+        setNodes(response.data.nodes || []);
+        setEdges(response.data.edges || []);
+        setDomains(response.data.domains || []);
+        
+        // 🔓 ปลดล็อคให้เซฟได้หลังจากอัปเดต State เสร็จแล้ว
+        setTimeout(() => setIsLoaded(true), 500); 
+        console.log("🏠 PROJECT_LOADED_FROM_DB");
+      }
+    } catch (error) {
+      console.warn("PROJECT_NOT_FOUND, STARTING NEW");
+      setIsLoaded(true); // ถ้าไม่เจอข้อมูล ก็เปิดให้เซฟโปรเจกต์ใหม่ได้เลย
+    }
+  };
+  loadProjectData();
+}, [projectId]);
+
+  const saveToDatabase = useCallback(async (currentNodes, currentEdges) => {
+    // ใช้ projectId จาก parameter ของ useMotegaoController โดยตรง
+    console.log("SAVE_TRIGGERED_WITH_ID:", projectId);
+
+    if (!projectId) {
+      console.warn("SAVE_ABORTED: No project ID or not loaded.");
+      return;
+    }
+
+    try {
+      // แก้ baseURL: ลบ /v1 ออกถ้าใน testApi.create ไม่มี แต่ใน url นี้ต้องระบุให้ชัด
+      await testApi.put(`/v1/projects/update/${projectId}`, {
         nodes: currentNodes,
         edges: currentEdges,
-        lastModified: new Date().toLocaleDateString()
+        updatedAt: new Date().toISOString()
       });
-      console.log("DATABASE_SYNCHRONIZED");
+      console.log("✅ DATABASE_SYNCHRONIZED");
     } catch (error) {
-      console.error("AUTO_SAVE_ERROR:", error);
+      console.error("❌ SAVE_ERROR:", error.response?.data || error.message);
     }
-  }, [projectId]);
+  }, [projectId]); // 👈 ต้องมั่นใจว่ามี projectId ตรงนี้นี้
 
   // Poll for task results
   useEffect(() => {
@@ -84,7 +108,12 @@ export const useMotegaoController = (projectId) => {
     const interval = setInterval(async () => {
       for (const [toolId, task] of activeTasks) {
         try {
-          const response = await api.get(`/commands/${task.taskId}/result`)
+          if (!task.taskId) {
+            console.warn(`Task ${toolId} has no taskId, skipping poll`)
+            continue
+          }
+          console.log(`Polling task ${toolId} with taskId: ${task.taskId}`)
+          const response = await testApi.get(`/v1/commands/${task.taskId}/result`)
           const { status, result } = response.data
 
           if (status === TASK_STATUS.STARTED) {
@@ -94,19 +123,20 @@ export const useMotegaoController = (projectId) => {
             }))
           } else
 
-          if (status === TASK_STATUS.SUCCESS) {
-            setRunningTasks(prev => ({
-              ...prev,
-              [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.COMPLETED, result }
-            }))
+            if (status === TASK_STATUS.SUCCESS) {
+              setRunningTasks(prev => ({
+                ...prev,
+                [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.COMPLETED, result }
+              }))
 
-            updateNodesWithResults(toolId, result)
-          } else if (status === TASK_STATUS.FAILURE) {
-            setRunningTasks(prev => ({
-              ...prev,
-              [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.FAILED, error: result }
-            }))
-          }
+              updateNodesWithResults(toolId, result)
+            } else if (status === TASK_STATUS.FAILURE) {
+              console.error("SUBDOMAIN_FAILED_REASON:", result);
+              setRunningTasks(prev => ({
+                ...prev,
+                [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.FAILED, error: result }
+              }))
+            }
         } catch (error) {
           console.error(`Error polling task ${task.taskId}:`, error)
         }
@@ -188,7 +218,11 @@ export const useMotegaoController = (projectId) => {
       }
     } else if (toolId === TOOL_IDS.SUBDOMAIN) {
       const nodeId = `subdomain-${Date.now()}`
-      const subdomains = Array.isArray(result) ? result : []
+      const subdomains = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.subdomains)
+          ? result.subdomains
+          : []
 
       newNode = {
         id: nodeId,
@@ -260,10 +294,7 @@ export const useMotegaoController = (projectId) => {
     // 3. อัปเดต Nodes และสั่ง Save ในที่เดียว
     setNodes(prev => {
       const updatedNodes = [...prev, newNode];
-
-      // 🚀 สั่งเซฟลง Database ทันทีโดยใช้ค่าล่าสุดที่เพิ่งรวมเสร็จ
       saveToDatabase(updatedNodes, edges);
-
       return updatedNodes;
     });
 
@@ -337,8 +368,7 @@ export const useMotegaoController = (projectId) => {
             "subdomains-20000": 2,
             "subdomains-110000": 3
           }
-          
-          response = await api.post("/commands/subdomain_dns_enum", {
+          response = await testApi.post("/v1/commands/subdomain_dns_enum", {
             domain: selectedDomain.name,
             threads: config.threads || 1,
             wordlist: wordlistMap[config.wordlist] || 1
@@ -346,17 +376,17 @@ export const useMotegaoController = (projectId) => {
           break
 
         case TOOL_IDS.NMAP:
-          let nmapPayload = {
+          response = await testApi.post("/v1/commands/nmap", {
             host: selectedDomain.name,
             timing_template: config.timing_template || 3,
             options: ["-sV"]
-          }
-          
+          })
+
           // Handle all ports flag - backend uses defaults when all_ports is not set
           if (config.all_ports) {
             nmapPayload.all_ports = true
           }
-          
+
           response = await api.post("/commands/nmap", nmapPayload)
           break
 
@@ -369,7 +399,7 @@ export const useMotegaoController = (projectId) => {
             "dirb-4": 4,
             "dirb-5": 5
           }
-          
+
           const protocol = config.protocol || "https"
           response = await api.post("/commands/path_enum", {
             url: `${protocol}://${selectedDomain.name}`,

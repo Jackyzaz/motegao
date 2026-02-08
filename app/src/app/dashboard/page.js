@@ -23,8 +23,8 @@ export default function Dashboard() {
       if (status === "authenticated" && session?.user?.name) {
         try {
           setLoading(true)
-          // ✅ เรียก GET /v1/projects/{username}
-          const response = await api.get(`/v1/projects/${session.user.name}`)
+          // ✅ เรียก GET /projects/{username}
+          const response = await api.get(`/projects/${session.user.name}`)
           setProjects(response.data)
         } catch (error) {
           console.error("FAILED TO FETCH PROJECTS:", error)
@@ -51,8 +51,8 @@ export default function Dashboard() {
     }
 
     try {
-      // ✅ ส่งข้อมูลไปที่ FastAPI: POST /v1/projects/create
-      const response = await api.post("/v1/projects/create", newProj)
+      // ✅ ส่งข้อมูลไปที่ FastAPI: POST /projects/create
+      const response = await api.post("/projects/create", newProj)
 
       if (response.status === 200 || response.status === 201) {
         // อัปเดต State หน้าจอ และนำทางไปหน้า Canvas

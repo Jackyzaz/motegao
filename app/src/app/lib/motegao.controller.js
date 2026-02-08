@@ -19,7 +19,7 @@ export const useMotegaoController = (projectId) => {
   const [showDomainModal, setShowDomainModal] = useState(false)
   const [newDomainInput, setNewDomainInput] = useState("")
   const [selectedDomain, setSelectedDomain] = useState(null)
-  const [enabledTools, setEnabledTools] = useState(["subdomain", "nmap"])
+  const [enabledTools, setEnabledTools] = useState(["subdomain", "nmap", "pathfinder"])
   const [scanResults, setScanResults] = useState(null)
   const [nodes, setNodes] = useState([])
   const [edges, setEdges] = useState([])

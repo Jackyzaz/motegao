@@ -27,6 +27,11 @@ export default function Tools({
   onSelectDomain,
   onOpenAddDomainModal
 }) {
+  // ✅ Check if any tool is currently running
+  const isAnyToolRunning = Object.values(runningTasks).some(
+    task => task?.status === UI_TASK_STATUS.RUNNING
+  )
+
   return (
     <div style={{ 
       width: 300, 
@@ -128,18 +133,23 @@ export default function Tools({
         </div>
       )}
       
-      {tools?.map(tool => (
-        <ToolBox 
-          key={tool.id}
-          tool={tool}
-          isEnabled={enabledTools.includes(tool.id)}
-          onToggle={() => onToggleTool(tool.id)}
-          onRun={(config) => onRunTool(tool.id, config)}
-          onCancel={() => onCancelTask(tool.id)}
-          taskStatus={runningTasks[tool.id]}
-          disabled={!selectedDomain}
-        />
-      ))}
+      {/* ✅ Pass isAnyToolRunning and current tool's running status to each ToolBox */}
+      {tools?.map(tool => {
+        const isThisToolRunning = runningTasks[tool.id]?.status === UI_TASK_STATUS.RUNNING
+        
+        return (
+          <ToolBox 
+            key={tool.id}
+            tool={tool}
+            isEnabled={enabledTools.includes(tool.id)}
+            onToggle={() => onToggleTool(tool.id)}
+            onRun={(config) => onRunTool(tool.id, config)}
+            onCancel={() => onCancelTask(tool.id)}
+            taskStatus={runningTasks[tool.id]}
+            disabled={!selectedDomain || (isAnyToolRunning && !isThisToolRunning)}
+          />
+        )
+      })}
     </div>
   )
 }

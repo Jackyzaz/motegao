@@ -24,6 +24,7 @@ function CanvasContent() {
         nodes,
         edges,
         runningTasks,
+        saveStatus,
         setShowDomainModal,
         setNewDomainInput,
         onNodesChange,
@@ -33,8 +34,9 @@ function CanvasContent() {
         handleSelectDomain,
         handleToggleTool,
         handleRunTool,
-        handleCancelTask
-    } = useMotegaoController()
+        handleCancelTask,
+        handleSaveProject
+    } = useMotegaoController(projectId)
 
     // 📡 ฟังก์ชันดึงข้อมูลโปรเจกต์จริงจาก Database
     useEffect(() => {
@@ -60,6 +62,8 @@ function CanvasContent() {
                     selectedDomain={selectedDomain}
                     onOpenDomainModal={() => setShowDomainModal(true)}
                     projectId={projectId}
+                    onSave={handleSaveProject}
+                    saveStatus={saveStatus}
                 />
                 <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
                     <Canvas

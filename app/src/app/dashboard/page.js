@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Topbar from "../components/Topbar"
 import ProjectCard from "../components/ProjectCard"
 import api from "../lib/axios" // ✅ นำเข้า axios instance ของเรา
-import { House ,Folder,Gear} from "phosphor-react";
+import { House, Folder, Gear } from "@phosphor-icons/react";
 
 
 export default function Dashboard() {
@@ -22,11 +22,11 @@ export default function Dashboard() {
     }
 
     const fetchProjects = async () => {
-      if (status === "authenticated" && session?.user?.name) {
+      if (status === "authenticated") {
         try {
           setLoading(true)
-          // ✅ เรียก GET /projects/{username}
-          const response = await api.get(`/projects/${session.user.name}`)
+          // ✅ เรียก GET /projects/my-projects (requires auth)
+          const response = await api.get("/projects/my-projects")
           setProjects(response.data)
         } catch (error) {
           console.error("FAILED TO FETCH PROJECTS:", error)
@@ -44,22 +44,22 @@ export default function Dashboard() {
     if (!session?.user?.name) return
 
     const newProj = {
-      id: String(Date.now()), // ใช้ String เพื่อให้ MongoDB ทำงานง่าย
       name: `NEW_RECON_${Math.floor(Math.random() * 1000)}`,
-      lastModified: new Date().toLocaleDateString(),
       nodes: [],
       edges: [],
-      owner: session.user.name // ✅ ระบุเจ้าของที่นี่
+      // owner will be set automatically from auth token
     }
 
     try {
-      // ✅ ส่งข้อมูลไปที่ FastAPI: POST /projects/create
+      // ✅ ส่งข้อมูลไปที่ FastAPI: POST /projects/create (requires auth)
       const response = await api.post("/projects/create", newProj)
 
       if (response.status === 200 || response.status === 201) {
-        // อัปเดต State หน้าจอ และนำทางไปหน้า Canvas
-        setProjects([newProj, ...projects])
-        router.push(`/canvas?id=${newProj.id}`)
+        // Refresh projects list after creation
+        const projectsResponse = await api.get("/projects/my-projects")
+        setProjects(projectsResponse.data)
+        // Navigate to the newly created project
+        router.push(`/canvas?id=${response.data.id}`)
       }
     } catch (error) {
       console.error("CREATE PROJECT ERROR:", error)
@@ -114,11 +114,10 @@ export default function Dashboard() {
 
             {projects.map((proj, index) => (
               <ProjectCard
-                // ✅ ลองใช้ id ถ้าไม่มีให้ใช้ _id ถ้าไม่มีจริงๆ ให้ใช้ index ของ loop
-                key={proj.id || proj._id || `proj-${index}`}
+                // MongoDB returns id as ObjectId, handle both formats
+                key={String(proj.id || proj._id || index)}
                 project={proj}
-                // ปรับจุด push URL ให้รองรับทั้ง id และ _id เผื่อกรณีข้อมูลเก่า
-                onClick={() => router.push(`/canvas?id=${proj.id || proj._id}`)}
+                onClick={() => router.push(`/canvas?id=${String(proj.id || proj._id)}`)}
               />
             ))}
             {projects.length === 0 && !loading && (

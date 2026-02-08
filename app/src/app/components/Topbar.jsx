@@ -1,9 +1,9 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from 'next/navigation';
-import { ShieldPlus} from "phosphor-react";
+import { ShieldPlus, FloppyDisk, CheckCircle, Circle } from "@phosphor-icons/react";
 
-export default function Topbar({ selectedDomain, onOpenDomainModal }) {
+export default function Topbar({ selectedDomain, onOpenDomainModal, projectId, onSave, saveStatus }) {
   const { data: session } = useSession()
   const router = useRouter();
   return (
@@ -34,6 +34,37 @@ export default function Topbar({ selectedDomain, onOpenDomainModal }) {
         <ShieldPlus size={25} style={{ position: "relative", bottom: "1px" }} />
         MOTEGAO
         </button>
+        
+        {/* Save button - only show when in project */}
+        {projectId && onSave && (
+          <button
+            onClick={onSave}
+            disabled={saveStatus === "saving"}
+            style={{
+              background: saveStatus === "saved" ? "#50fa7b" : saveStatus === "saving" ? "#888" : "#76ABAE",
+              border: "none",
+              color: "#222831",
+              cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
+              padding: "5px 12px",
+              display: "flex",
+              alignItems: "center",
+              borderRadius: "4px",
+              gap: "6px",
+              fontWeight: "bold",
+              fontSize: "12px",
+              transition: "all 0.3s"
+            }}
+          >
+            {saveStatus === "saved" ? (
+              <><CheckCircle size={18} /> SAVED</>
+            ) : saveStatus === "saving" ? (
+              <><Circle size={18} /> SAVING...</>
+            ) : (
+              <><FloppyDisk size={18} /> SAVE</>
+            )}
+          </button>
+        )}
+        
         <div style={{ fontWeight: "bold", color: "#EEEEEE" }}>
           
         </div>

@@ -33,6 +33,7 @@ function CanvasContent() {
         handleSelectDomain,
         handleToggleTool,
         handleRunTool,
+        handleCancelTask
     } = useMotegaoController()
 
     // 📡 ฟังก์ชันดึงข้อมูลโปรเจกต์จริงจาก Database
@@ -72,12 +73,13 @@ function CanvasContent() {
                     <Tools
                         tools={[
                             { id: "subdomain", name: "Subdomain Finder", enabled: true },
-                            { id: "pathfinder", name: "Path Finder", enabled: false },
+                            { id: "pathfinder", name: "Path Finder", enabled: true },
                             { id: "nmap", name: "Nmap Scan", enabled: true }
                         ]}
                         enabledTools={enabledTools}
                         onToggleTool={handleToggleTool}
                         onRunTool={handleRunTool}
+                        onCancelTask={handleCancelTask}
                         runningTasks={runningTasks}
                         domains={domains}
                         selectedDomain={selectedDomain}

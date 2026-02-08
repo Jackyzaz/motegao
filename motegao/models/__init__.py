@@ -10,6 +10,7 @@ from . import files
 from .users import User
 from .tokens import ApiToken
 
+from .projects import Project
 
 DocumentType = TypeVar("DocumentType", bound=beanie.Document)
 

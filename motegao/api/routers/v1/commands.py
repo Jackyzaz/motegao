@@ -3,11 +3,15 @@ from motegao.celery.tasks.commands import (
     run_command_nmap,
     run_command_ping,
     run_command_subdomain_enum,
-    run_command_path_enum
+    run_command_path_enum,
 )
 from fastapi import APIRouter, HTTPException
 
-from motegao.models.cmd_request import NmapRequest, subdomainEnumRequest, PathEnumRequest
+from motegao.models.cmd_request import (
+    NmapRequest,
+    subdomainEnumRequest,
+    PathEnumRequest,
+)
 
 router = APIRouter(prefix="/commands", tags=["commands"])
 
@@ -26,14 +30,15 @@ ALLOWED_NMAP_OPTIONS = {
 def get_task_result(task_id: str):
     task = celery.AsyncResult(task_id)
 
-    return {"status": task.status, "result": task.result}
+    return {"status": task.status, "result": task.info}
+
 
 @router.get("/{task_id}/cancel")
 def cancel_task(task_id: str):
     task = celery.AsyncResult(task_id)
     result = task.result
-    
-    celery.control.revoke(task_id, terminate=True, signal='SIGKILL')
+
+    celery.control.revoke(task_id, terminate=True, signal="SIGKILL")
 
     return {"status": "CANCELLED", "result": result}
 
@@ -90,6 +95,7 @@ def subdomain_enum(payload: subdomainEnumRequest):
         payload.domain, payload.threads, payload.wordlist
     )
     return {"task_id": task.id}
+
 
 @router.post("/path_enum")
 def path_enum(payload: PathEnumRequest):

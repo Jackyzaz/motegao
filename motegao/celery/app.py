@@ -7,3 +7,8 @@ celery = Celery(
     backend="rpc://",
     include=["motegao.celery.tasks.commands"],
 )
+
+celery.conf.update(
+    task_track_started=True,
+    result_extended=True,
+)

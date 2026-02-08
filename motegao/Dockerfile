@@ -11,6 +11,12 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Install gobuster
+RUN curl -sL https://github.com/OJ/gobuster/releases/download/v3.6.0/gobuster_Linux_x86_64.tar.gz -o /tmp/gobuster.tar.gz \
+    && tar -xzf /tmp/gobuster.tar.gz -C /usr/local/bin \
+    && chmod +x /usr/local/bin/gobuster \
+    && rm /tmp/gobuster.tar.gz
+
 # Copy the requirements file and install dependencies
 # This leverages Docker's cache, as requirements.txt changes less often than code
 COPY requirements.txt .
@@ -20,6 +26,10 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 # Copy the entire motegao package and scripts
 COPY motegao/ /app/motegao/
 COPY scripts/ /app/scripts/
+
+# Copy wordlists and install them
+COPY wordlists/ /app/wordlists/
+RUN mkdir -p /usr/share/wordlists && cp /app/wordlists/* /usr/share/wordlists/
 
 # Expose port 8000 for the FastAPI application
 EXPOSE 8000

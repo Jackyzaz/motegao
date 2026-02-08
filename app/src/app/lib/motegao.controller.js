@@ -19,7 +19,7 @@ export const useMotegaoController = (projectId) => {
   const [showDomainModal, setShowDomainModal] = useState(false)
   const [newDomainInput, setNewDomainInput] = useState("")
   const [selectedDomain, setSelectedDomain] = useState(null)
-  const [enabledTools, setEnabledTools] = useState(["subdomain", "nmap"])
+  const [enabledTools, setEnabledTools] = useState(["subdomain", "nmap", "pathfinder"])
   const [scanResults, setScanResults] = useState(null)
   const [nodes, setNodes] = useState([])
   const [edges, setEdges] = useState([])
@@ -87,7 +87,12 @@ export const useMotegaoController = (projectId) => {
           const response = await api.get(`/commands/${task.taskId}/result`)
           const { status, result } = response.data
 
-          if (status === TASK_STATUS.SUCCESS) {
+          if (status == "PROGRESS") {
+            setRunningTasks(prev => ({
+              ...prev,
+              [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.RUNNING, progress: (result && result.progress) || 0 }
+            }))
+          } else if (status === TASK_STATUS.SUCCESS) {
             setRunningTasks(prev => ({
               ...prev,
               [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.COMPLETED, result }
@@ -181,31 +186,44 @@ export const useMotegaoController = (projectId) => {
       }
     } else if (toolId === TOOL_IDS.SUBDOMAIN) {
       const nodeId = `subdomain-${Date.now()}`
-      const subdomains = Array.isArray(result) ? result : []
+      const subdomains = result.subdomains && Array.isArray(result.subdomains) ? result.subdomains : (Array.isArray(result) ? result : [])
 
       newNode = {
         id: nodeId,
         data: {
           label: (
             <div style={{ textAlign: "left", fontSize: "11px" }}>
-              <b style={{ color: "#76ABAE" }}>Subdomains Found</b>
+              <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Subdomains Found ({subdomains.length})</b>
               {subdomains.length > 0 ? (
-                subdomains.slice(0, 5).map((sub, i) => (
-                  <div key={i} style={{ color: "#50fa7b" }}>• {sub}</div>
-                ))
+                <table style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "10px",
+                  color: "#EEEEEE"
+                }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #76ABAE" }}>
+                      <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Subdomain</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subdomains.map((subdomain, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                        <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
+                          {subdomain}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <div style={{ color: "#EEEEEE" }}>No subdomains found</div>
-              )}
-              {subdomains.length > 5 && (
-                <div style={{ color: "#76ABAE", fontSize: "10px" }}>
-                  +{subdomains.length - 5} more
-                </div>
               )}
             </div>
           ),
         },
         position: NODE_POSITIONS.SUBDOMAIN,
-        style: NODE_STYLES.RESULT,
+        style: { ...NODE_STYLES.RESULT, width: 280 },
       }
 
       const domainNodeId = selectedDomain ? `domain-${selectedDomain.id}` : "1"
@@ -215,6 +233,83 @@ export const useMotegaoController = (projectId) => {
         target: nodeId,
         animated: true,
         style: EDGE_STYLES.DEFAULT
+      }
+    } else if (toolId === TOOL_IDS.PATHFINDER) {
+      const nodeId = `pathfinder-${Date.now()}`
+      const isError = result.error && typeof result.error === "string"
+      const paths = !isError && result.paths && Array.isArray(result.paths) ? result.paths : []
+
+      if (isError) {
+        newNode = {
+          id: nodeId,
+          data: {
+            label: (
+              <div style={{ textAlign: "left", fontSize: "11px" }}>
+                <b style={{ color: "#76ABAE" }}>Pathfinder Error</b>
+                <div style={{ color: "#ff5555", fontSize: "10px", marginTop: "6px", wordBreak: "break-word" }}>
+                  {result.error}
+                </div>
+              </div>
+            ),
+          },
+          position: NODE_POSITIONS.SUBDOMAIN,
+          style: NODE_STYLES.ERROR,
+        }
+      } else {
+        newNode = {
+          id: nodeId,
+          data: {
+            label: (
+              <div style={{ textAlign: "left", fontSize: "11px" }}>
+                <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Paths Found ({paths.length})</b>
+                {paths.length > 0 ? (
+                  <table style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "10px",
+                    color: "#EEEEEE"
+                  }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #76ABAE" }}>
+                        <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Path</th>
+                        <th style={{ padding: "4px", textAlign: "center", color: "#76ABAE", fontWeight: "bold" }}>Status</th>
+                        <th style={{ padding: "4px", textAlign: "right", color: "#76ABAE", fontWeight: "bold" }}>Size</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paths.map((pathItem, i) => (
+                        <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                          <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
+                            {pathItem.path}
+                          </td>
+                          <td style={{ padding: "4px", textAlign: "center", color: "#EEEEEE" }}>
+                            {pathItem.status_code}
+                          </td>
+                          <td style={{ padding: "4px", textAlign: "right", color: "#EEEEEE" }}>
+                            {pathItem.size}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ color: "#EEEEEE" }}>No paths found</div>
+                )}
+              </div>
+            ),
+          },
+          position: NODE_POSITIONS.SUBDOMAIN,
+          style: { ...NODE_STYLES.RESULT, width: 300 },
+        }
+      }
+
+      const domainNodeId = selectedDomain ? `domain-${selectedDomain.id}` : "1"
+      newEdge = {
+        id: `e-${domainNodeId}-${nodeId}`,
+        source: domainNodeId,
+        target: nodeId,
+        animated: true,
+        style: isError ? EDGE_STYLES.ERROR : EDGE_STYLES.DEFAULT
       }
     }
 
@@ -306,6 +401,44 @@ export const useMotegaoController = (projectId) => {
     )
   }, [])
 
+  const handleCancelTask = useCallback(async (toolId) => {
+    const task = runningTasks[toolId]
+    if (!task || !task.taskId) {
+      showError("No running task to cancel", "Cancel Failed")
+      return
+    }
+
+    try {
+      // Cancel the task and get any partial results
+      const response = await api.get(`/commands/${task.taskId}/cancel`)
+      const { status, result } = response.data
+      
+      // If we have partial results, update the graph with them
+      if (result && (result.subdomains?.length > 0 || result.paths?.length > 0 || result)) {
+        if (toolId === TOOL_IDS.SUBDOMAIN || toolId === TOOL_IDS.PATHFINDER) {
+          updateNodesWithResults(toolId, result)
+        }
+        showInfo("Task cancelled. Partial results have been saved.", "Task Cancelled")
+      } else {
+        showInfo("Task cancelled successfully", "Task Cancelled")
+      }
+
+      // Remove task from running tasks
+      setRunningTasks(prev => {
+        const newTasks = { ...prev }
+        delete newTasks[toolId]
+        return newTasks
+      })
+      
+    } catch (error) {
+      console.error(`Error cancelling task ${task.taskId}:`, error)
+      showError(
+        `Failed to cancel task: ${error.response?.data?.detail || error.message}`,
+        "Cancel Failed"
+      )
+    }
+  }, [runningTasks, showError, showInfo, updateNodesWithResults])
+
   const handleRunTool = useCallback(async (toolId, config) => {
     if (!selectedDomain) {
       showError("Please select a domain first", "No Domain Selected")
@@ -326,35 +459,57 @@ export const useMotegaoController = (projectId) => {
         case TOOL_IDS.SUBDOMAIN:
           // Map wordlist string to integer for backend API
           const wordlistMap = {
-            "top1000": 1,
-            "top5000": 2,
-            "top20000": 3
+            "subdomains-5000": 1,
+            "subdomains-20000": 2,
+            "subdomains-110000": 3
           }
+          
           response = await api.post("/commands/subdomain_dns_enum", {
             domain: selectedDomain.name,
-            threads: 10,
+            threads: config.threads || 1,
             wordlist: wordlistMap[config.wordlist] || 1
           })
           break
 
         case TOOL_IDS.NMAP:
-          response = await api.post("/commands/nmap", {
+          let nmapPayload = {
             host: selectedDomain.name,
-            timing_template: 4,
-            options: ["-sV"],
-            all_ports: false,
-            ports_specific: [80, 443, 8080, 8443]
-          })
+            timing_template: config.timing_template || 3,
+            options: ["-sV"]
+          }
+          
+          // Handle all ports flag - backend uses defaults when all_ports is not set
+          if (config.all_ports) {
+            nmapPayload.all_ports = true
+          }
+          
+          response = await api.post("/commands/nmap", nmapPayload)
           break
 
         case TOOL_IDS.PATHFINDER:
-          showInfo("Path finder API is not yet implemented. Coming soon!", "Feature Not Available")
-          setRunningTasks(prev => {
-            const newTasks = { ...prev }
-            delete newTasks[toolId]
-            return newTasks
-          })
-          return
+          // Map wordlist string to integer for backend API
+          const pathfinderWordlistMap = {
+            "dirb-1": 1,
+            "dirb-2": 2,
+            "dirb-3": 3,
+            "dirb-4": 4,
+            "dirb-5": 5
+          }
+          
+          const protocol = config.protocol || "https"
+          const pathfinderPayload = {
+            url: `${protocol}://${selectedDomain.name}`,
+            threads: config.threads || 1,
+            wordlist: pathfinderWordlistMap[config.wordlist] || 1
+          }
+          
+          // Add exclude_status if provided
+          if (config.exclude_status && config.exclude_status.length > 0) {
+            pathfinderPayload.exclude_status = config.exclude_status
+          }
+          
+          response = await api.post("/commands/path_enum", pathfinderPayload)
+          break
 
         default:
           showError(`Tool ${toolId} is not yet implemented`, "Tool Not Available")
@@ -414,5 +569,6 @@ export const useMotegaoController = (projectId) => {
     // Tool handlers
     handleToggleTool,
     handleRunTool,
+    handleCancelTask,
   }
 }

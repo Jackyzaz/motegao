@@ -1,42 +1,56 @@
 from fastapi import APIRouter, HTTPException
-from .schemas import ProjectSchema # import จากไฟล์ข้างๆ
-# ตรงนี้ให้ดูใน users.py ว่าเขา import ตัวแปรที่ใช้ต่อ MongoDB มายังไง
-# เช่น from app.core.database import db
+from .schemas import ProjectSchema
+from typing import List
 
-router = APIRouter()
+# ✅ Import Project มาจากที่เดียว และใช้ชื่อนี้ตลอดทั้งไฟล์
+from motegao.models.projects import Project
+
+router = APIRouter(prefix="/projects", tags=["Projects"])
+
 
 @router.post("/create")
 async def create_project(project: ProjectSchema):
     try:
-        # 📥 บันทึกลง Collection ชื่อ "projects"
-        # await db.projects.insert_one(project.dict()) 
-        return {"status": "success", "id": project.id}
+        # ✅ ตรวจสอบว่าฟิลด์ใน project.dict() ตรงกับใน Model Project หรือไม่
+        # ถ้า Frontend ส่ง 'id' มาซ้ำกับที่ MongoDB จะสร้างเอง อาจจะ Error ได้
+        project_data = project.dict()
+
+        new_project = Project(**project_data)
+        await new_project.insert()
+        return {"status": "success", "id": new_project.id}
     except Exception as e:
+        print(f"❌ CREATE ERROR: {str(e)}")  # ดู Error จริงใน Terminal ของ FastAPI
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/{username}")
+
+@router.get("/{username}", response_model=List[Project])
 async def get_user_projects(username: str):
     try:
-        # 🔍 ค้นหาเฉพาะอันที่เจ้าของ (owner) ตรงกับ username ที่ส่งมา
-        # cursor = db.projects.find({"owner": username})
-        # projects = await cursor.to_list(length=100)
-        
-        # จัดการเรื่อง _id (ถ้าใช้ MongoDB)
-        # for p in projects: p.pop("_id", None)
-        
-        return [] # คืนค่าเป็น List เปล่าไปก่อนในช่วงทดสอบ
+        # ✅ ค้นหาโปรเจกต์ของ User นั้นๆ
+        projects = await Project.find(Project.owner == username).to_list()
+        return projects
     except Exception as e:
+        print(f"❌ FETCH ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @router.put("/update/{project_id}")
 async def update_project(project_id: str, update_data: dict):
-    # อัปเดตข้อมูลใน MongoDB โดยค้นหาจากฟิลด์ id (ไม่ใช่ _id)
-    await db.projects.update_one(
-        {"id": project_id},
-        {"$set": {
-            "nodes": update_data.get("nodes"),
-            "edges": update_data.get("edges"),
-            "lastModified": update_data.get("lastModified")
-        }}
-    )
-    return {"status": "success"}
+    try:
+        # ✅ ค้นหา Project ตาม id ที่ส่งมาจาก Frontend
+        project = await Project.find_one(Project.id == project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # อัปเดตข้อมูล
+        await project.set(
+            {
+                Project.nodes: update_data.get("nodes"),
+                Project.edges: update_data.get("edges"),
+                Project.lastModified: update_data.get("lastModified"),
+            }
+        )
+        return {"status": "success"}
+    except Exception as e:
+        print(f"❌ UPDATE ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

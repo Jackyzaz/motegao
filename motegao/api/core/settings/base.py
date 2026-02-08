@@ -14,5 +14,5 @@ class BaseAppSettings(BaseSettings):
     APP_ENV: AppEnvTypes = AppEnvTypes.prod
 
     class Config:
-        env_file = os.getenv("ENV_FILE", ".env")
+        env_file = os.getenv("ENV_FILE", ".env.local")
         extra = "allow"

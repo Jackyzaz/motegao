@@ -8,6 +8,10 @@ config({ path: resolve(process.cwd(), '../.env.local') });
 const nextConfig = {
   /* config options here */
   output: 'standalone',
+  // Disable Turbopack for production builds (not stable in Docker yet)
+  experimental: {
+    turbo: false,
+  },
   env: {
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,

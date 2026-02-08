@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import Topbar from "../components/Topbar"
 import ProjectCard from "../components/ProjectCard"
 import api from "../lib/axios" // ✅ นำเข้า axios instance ของเรา
-import { House, Folder, Gear } from "@phosphor-icons/react";
+import { House, Folder, Gear } from "@phosphor-icons/react"
+import { useModal } from "../context/ModalContext"
 
 
 export default function Dashboard() {
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const router = useRouter()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const { showInputModal, showConfirm, showSuccess, showError } = useModal()
 
   // 1. โหลดโปรเจกต์จาก Database (FastAPI)
   useEffect(() => {
@@ -43,28 +45,100 @@ export default function Dashboard() {
   const createNewProject = async () => {
     if (!session?.user?.name) return
 
-    const newProj = {
-      name: `NEW_RECON_${Math.floor(Math.random() * 1000)}`,
-      nodes: [],
-      edges: [],
-      // owner will be set automatically from auth token
-    }
+    showInputModal({
+      title: "Create New Project",
+      message: "Enter a name for your new project:",
+      placeholder: "Enter project name...",
+      confirmText: "Create",
+      onConfirm: async (projectName) => {
+        if (!projectName || !projectName.trim()) {
+          showError("Project name cannot be empty")
+          return
+        }
 
-    try {
-      // ✅ ส่งข้อมูลไปที่ FastAPI: POST /projects/create (requires auth)
-      const response = await api.post("/projects/create", newProj)
+        const newProj = {
+          name: projectName.trim(),
+          nodes: [],
+          edges: [],
+          // owner will be set automatically from auth token
+        }
 
-      if (response.status === 200 || response.status === 201) {
-        // Refresh projects list after creation
-        const projectsResponse = await api.get("/projects/my-projects")
-        setProjects(projectsResponse.data)
-        // Navigate to the newly created project
-        router.push(`/canvas?id=${response.data.id}`)
+        try {
+          // ✅ ส่งข้อมูลไปที่ FastAPI: POST /projects/create (requires auth)
+          const response = await api.post("/projects/create", newProj)
+
+          if (response.status === 200 || response.status === 201) {
+            // Refresh projects list after creation
+            const projectsResponse = await api.get("/projects/my-projects")
+            setProjects(projectsResponse.data)
+            showSuccess("Project created successfully!")
+            // Navigate to the newly created project
+            router.push(`/canvas?id=${response.data.id}`)
+          }
+        } catch (error) {
+          console.error("CREATE PROJECT ERROR:", error)
+          showError("Failed to create project. Please try again.")
+        }
       }
-    } catch (error) {
-      console.error("CREATE PROJECT ERROR:", error)
-      alert("FAILED TO INITIALIZE PROJECT IN DATABASE")
-    }
+    })
+  }
+
+  // Rename project
+  const handleRenameProject = async (project) => {
+    showInputModal({
+      title: "Rename Project",
+      message: "Enter a new name for the project:",
+      placeholder: "Enter new name...",
+      initialValue: project.name,
+      confirmText: "Rename",
+      onConfirm: async (newName) => {
+        if (!newName || !newName.trim()) {
+          showError("Project name cannot be empty")
+          return
+        }
+
+        try {
+          const projectId = String(project.id || project._id)
+          const response = await api.put(`/projects/rename/${projectId}`, {
+            name: newName.trim()
+          })
+
+          if (response.status === 200) {
+            // Refresh projects list
+            const projectsResponse = await api.get("/projects/my-projects")
+            setProjects(projectsResponse.data)
+            showSuccess("Project renamed successfully!")
+          }
+        } catch (error) {
+          console.error("RENAME PROJECT ERROR:", error)
+          showError("Failed to rename project. Please try again.")
+        }
+      }
+    })
+  }
+
+  // Delete project
+  const handleDeleteProject = async (project) => {
+    showConfirm(
+      `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
+      async () => {
+        try {
+          const projectId = String(project.id || project._id)
+          const response = await api.delete(`/projects/delete/${projectId}`)
+
+          if (response.status === 200) {
+            // Refresh projects list
+            const projectsResponse = await api.get("/projects/my-projects")
+            setProjects(projectsResponse.data)
+            showSuccess("Project deleted successfully!")
+          }
+        } catch (error) {
+          console.error("DELETE PROJECT ERROR:", error)
+          showError("Failed to delete project. Please try again.")
+        }
+      },
+      "Delete Project"
+    )
   }
 
   // แสดงผลระหว่างรอ Session หรือโหลดข้อมูล
@@ -118,6 +192,8 @@ export default function Dashboard() {
                 key={String(proj.id || proj._id || index)}
                 project={proj}
                 onClick={() => router.push(`/canvas?id=${String(proj.id || proj._id)}`)}
+                onRename={handleRenameProject}
+                onDelete={handleDeleteProject}
               />
             ))}
             {projects.length === 0 && !loading && (

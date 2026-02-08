@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
-from .schemas import ProjectSchema, ProjectCreateSchema
+from .schemas import ProjectSchema, ProjectCreateSchema, ProjectRenameSchema
 from typing import List
 from beanie import PydanticObjectId
+import datetime
 
 # ✅ Import Project มาจากที่เดียว และใช้ชื่อนี้ตลอดทั้งไฟล์
 from motegao.models.projects import Project
@@ -96,4 +97,60 @@ async def update_project(
         return {"status": "success"}
     except Exception as e:
         print(f"❌ UPDATE ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/rename/{project_id}")
+async def rename_project(
+    project_id: str,
+    rename_data: ProjectRenameSchema,
+    current_user: models.users.User = Depends(deps.get_current_user),
+):
+    try:
+        # Find project and verify ownership
+        project = await Project.find_one(Project.id == PydanticObjectId(project_id))
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Verify user owns this project
+        if project.owner != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to rename this project"
+            )
+
+        # Update project name and lastModified
+        await project.set(
+            {
+                Project.name: rename_data.name,
+                Project.lastModified: datetime.datetime.now(),
+            }
+        )
+        return {"status": "success", "message": "Project renamed successfully"}
+    except Exception as e:
+        print(f"❌ RENAME ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/delete/{project_id}")
+async def delete_project(
+    project_id: str,
+    current_user: models.users.User = Depends(deps.get_current_user),
+):
+    try:
+        # Find project and verify ownership
+        project = await Project.find_one(Project.id == PydanticObjectId(project_id))
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Verify user owns this project
+        if project.owner != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to delete this project"
+            )
+
+        # Delete the project
+        await project.delete()
+        return {"status": "success", "message": "Project deleted successfully"}
+    except Exception as e:
+        print(f"❌ DELETE ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

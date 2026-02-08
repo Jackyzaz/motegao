@@ -1,6 +1,7 @@
 "use client"
 import { createContext, useContext, useState, useCallback } from "react"
 import Modal from "@/app/components/Modal"
+import InputModal from "@/app/components/InputModal"
 
 const ModalContext = createContext()
 
@@ -23,6 +24,16 @@ export const ModalProvider = ({ children }) => {
     onConfirm: null,
   })
 
+  const [inputModalState, setInputModalState] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "OK",
+    inputValue: "",
+    placeholder: "Enter value...",
+    onConfirm: null,
+  })
+
   const showModal = useCallback((config) => {
     setModalState({
       isOpen: true,
@@ -37,6 +48,26 @@ export const ModalProvider = ({ children }) => {
 
   const hideModal = useCallback(() => {
     setModalState(prev => ({ ...prev, isOpen: false }))
+  }, [])
+
+  const showInputModal = useCallback((config) => {
+    setInputModalState({
+      isOpen: true,
+      title: config.title || "",
+      message: config.message || "",
+      confirmText: config.confirmText || "OK",
+      inputValue: config.initialValue || "",
+      placeholder: config.placeholder || "Enter value...",
+      onConfirm: config.onConfirm || null,
+    })
+  }, [])
+
+  const hideInputModal = useCallback(() => {
+    setInputModalState(prev => ({ ...prev, isOpen: false, inputValue: "" }))
+  }, [])
+
+  const updateInputValue = useCallback((value) => {
+    setInputModalState(prev => ({ ...prev, inputValue: value }))
   }, [])
 
   // Convenience methods
@@ -76,7 +107,9 @@ export const ModalProvider = ({ children }) => {
         showSuccess, 
         showWarning, 
         showInfo,
-        showConfirm 
+        showConfirm,
+        showInputModal,
+        hideInputModal
       }}
     >
       {children}
@@ -89,6 +122,17 @@ export const ModalProvider = ({ children }) => {
         confirmText={modalState.confirmText}
         showCancel={modalState.showCancel}
         onConfirm={modalState.onConfirm}
+      />
+      <InputModal
+        isOpen={inputModalState.isOpen}
+        onClose={hideInputModal}
+        title={inputModalState.title}
+        message={inputModalState.message}
+        confirmText={inputModalState.confirmText}
+        inputValue={inputModalState.inputValue}
+        onInputChange={updateInputValue}
+        placeholder={inputModalState.placeholder}
+        onConfirm={inputModalState.onConfirm}
       />
     </ModalContext.Provider>
   )

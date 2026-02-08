@@ -17,6 +17,15 @@ class ProjectCreateSchema(BaseModel):
         populate_by_name = True
 
 
+class ProjectRenameSchema(BaseModel):
+    """Schema for renaming a project"""
+
+    name: str
+
+    class Config:
+        populate_by_name = True
+
+
 class ProjectSchema(BaseModel):
     """Schema for project responses - uses proper types"""
 

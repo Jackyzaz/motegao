@@ -87,7 +87,7 @@ export const useMotegaoController = (projectId) => {
           const response = await api.get(`/commands/${task.taskId}/result`)
           const { status, result } = response.data
 
-          if (status === TASK_STATUS.STARTED) {
+          if (status == "PROGRESS") {
             setRunningTasks(prev => ({
               ...prev,
               [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.RUNNING, progress: (result && result.progress) || 0 }

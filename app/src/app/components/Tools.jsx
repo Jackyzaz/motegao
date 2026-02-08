@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { UI_TASK_STATUS } from "@/app/lib/config"
 
 const WORDLIST_SUDOMAINS = [
@@ -151,13 +151,28 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
   const [timingTemplate, setTimingTemplate] = useState(3)
   const [protocol, setProtocol] = useState("https")
   const [excludeStatus, setExcludeStatus] = useState("")
+  const [showCompleted, setShowCompleted] = useState(true)
   
   const isRunning = taskStatus?.status === UI_TASK_STATUS.RUNNING
   const isCompleted = taskStatus?.status === UI_TASK_STATUS.COMPLETED
   const isFailed = taskStatus?.status === UI_TASK_STATUS.FAILED
 
+  // Add useEffect to handle the 5-second delay for completed status
+  useEffect(() => {
+    if (isCompleted && showCompleted) {
+      const timer = setTimeout(() => {
+        setShowCompleted(false)
+      }, 5000)
+
+      return () => clearTimeout(timer)
+    } else if (!isCompleted) {
+      setShowCompleted(true)
+    }
+  }, [isCompleted, showCompleted])
+
   const handleRun = () => {
     if (!isEnabled || isRunning || disabled) return
+    setShowCompleted(true) // Reset when running a new task
     if (tool.id === "nmap") {
       onRun({ all_ports: scanAllPorts, timing_template: timingTemplate })
     } else if (tool.id === "subdomain") {
@@ -178,14 +193,14 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
 
   const getButtonText = () => {
     if (isRunning) return "Running..."
-    if (isCompleted) return "✓ Completed"
+    if (isCompleted && showCompleted) return "✓ Completed"
     if (isFailed) return "✗ Failed"
     return "Run Tool"
   }
 
   const getButtonColor = () => {
     if (!isEnabled) return "#444"
-    if (isCompleted) return "#50fa7b"
+    if (isCompleted && showCompleted) return "#50fa7b"
     if (isFailed) return "#ff5555"
     return "#76ABAE"
   }

@@ -26,7 +26,7 @@ ALLOWED_NMAP_OPTIONS = {
 def get_task_result(task_id: str):
     task = celery.AsyncResult(task_id)
 
-    return {"status": task.status, "result": task.result}
+    return {"status": task.status, "result": task.info}
 
 @router.get("/{task_id}/cancel")
 def cancel_task(task_id: str):

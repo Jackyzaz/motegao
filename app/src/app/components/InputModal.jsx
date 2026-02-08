@@ -47,7 +47,6 @@ export default function InputModal({ isOpen, onClose, title, message, confirmTex
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Title */}
         {title && (
           <h3 style={{ 
             color: "#76ABAE", 
@@ -59,7 +58,6 @@ export default function InputModal({ isOpen, onClose, title, message, confirmTex
           </h3>
         )}
 
-        {/* Message */}
         {message && (
           <p style={{ 
             color: "#EEEEEE", 
@@ -70,7 +68,6 @@ export default function InputModal({ isOpen, onClose, title, message, confirmTex
           </p>
         )}
 
-        {/* Input Field */}
         <input
           type="text"
           value={inputValue}
@@ -92,8 +89,7 @@ export default function InputModal({ isOpen, onClose, title, message, confirmTex
           }}
         />
 
-        {/* Buttons */}
-        <div style={{ 
+        <div style={{
           display: "flex", 
           gap: "10px", 
           justifyContent: "flex-end" 

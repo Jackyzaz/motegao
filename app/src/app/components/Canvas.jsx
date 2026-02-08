@@ -1,16 +1,15 @@
-"use client";
+"use client"
 
-import React from "react";
+import React from "react"
 import ReactFlow, {
   Background,
   Controls,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from "reactflow"
+import "reactflow/dist/style.css"
 
 export default function Canvas({ nodes, edges, onNodesChange, onEdgesChange, onNodeClick, scanResults }) {
   return (
     <div style={{ flex: 1, height: "100%", background: "#222831", position: "relative" }}>
-      {/* Scan Results Indicator */}
       {scanResults && (
         <div style={{
           position: "absolute",
@@ -29,7 +28,6 @@ export default function Canvas({ nodes, edges, onNodesChange, onEdgesChange, onN
         </div>
       )}
 
-      {/* Global style สำหรับ React Flow Controls */}
       <style jsx global>{`
         .react-flow__controls button svg {
           fill: #000000;
@@ -57,5 +55,5 @@ export default function Canvas({ nodes, edges, onNodesChange, onEdgesChange, onN
         />
       </ReactFlow>
     </div>
-  );
+  )
 }

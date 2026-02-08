@@ -27,7 +27,6 @@ export default function ProjectCard({ project, onClick, onRename, onDelete }) {
       onMouseOver={(e) => (e.currentTarget.style.border = "1px solid #76ABAE")}
       onMouseOut={(e) => (e.currentTarget.style.border = "1px solid #444")}
     >
-      {/* Action Buttons */}
       <div style={{
         position: "absolute",
         top: "8px",
@@ -72,7 +71,6 @@ export default function ProjectCard({ project, onClick, onRename, onDelete }) {
         </button>
       </div>
 
-      {/* ส่วนพรีวิว (จำลอง) */}
       <div style={{ 
         height: "140px", 
         background: "#222831", 
@@ -84,7 +82,7 @@ export default function ProjectCard({ project, onClick, onRename, onDelete }) {
         <div style={{ color: "#76ABAE", opacity: 0.3, fontSize: "40px" }}>⚛</div>
       </div>
 
-      {/* รายละเอียด */}
+
       <div style={{ padding: "12px" }}>
         <div style={{ color: "#EEEEEE", fontWeight: "bold", fontSize: "14px" }}>
           {project.name}

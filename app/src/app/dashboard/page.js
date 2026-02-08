@@ -2,11 +2,12 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import Topbar from "../components/Topbar"
-import ProjectCard from "../components/ProjectCard"
-import api from "../lib/axios" // ✅ นำเข้า axios instance ของเรา
 import { House, Folder, Gear } from "@phosphor-icons/react"
-import { useModal } from "../context/ModalContext"
+
+import Topbar from "@/app/components/Topbar"
+import ProjectCard from "@/app/components/ProjectCard"
+import api from "@/app/lib/axios"
+import { useModal } from "@/app/context/ModalContext"
 
 
 export default function Dashboard() {
@@ -16,7 +17,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const { showInputModal, showConfirm, showSuccess, showError } = useModal()
 
-  // 1. โหลดโปรเจกต์จาก Database (FastAPI)
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login")
@@ -27,7 +27,6 @@ export default function Dashboard() {
       if (status === "authenticated") {
         try {
           setLoading(true)
-          // ✅ เรียก GET /projects/my-projects (requires auth)
           const response = await api.get("/projects/my-projects")
           setProjects(response.data)
         } catch (error) {
@@ -41,7 +40,6 @@ export default function Dashboard() {
     fetchProjects()
   }, [status, session, router])
 
-  // 2. สร้างโปรเจกต์ใหม่ลง Database
   const createNewProject = async () => {
     if (!session?.user?.name) return
 
@@ -83,7 +81,6 @@ export default function Dashboard() {
     })
   }
 
-  // Rename project
   const handleRenameProject = async (project) => {
     showInputModal({
       title: "Rename Project",
@@ -117,7 +114,6 @@ export default function Dashboard() {
     })
   }
 
-  // Delete project
   const handleDeleteProject = async (project) => {
     showConfirm(
       `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,

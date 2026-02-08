@@ -1,10 +1,8 @@
-// API Configuration
 export const API_CONFIG = {
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/v1',
-  pollInterval: 2000, // 2 seconds
+  pollInterval: 2000,
 }
 
-// Celery Task Status
 export const TASK_STATUS = {
   PENDING: 'PENDING',
   STARTED: 'STARTED',
@@ -14,14 +12,12 @@ export const TASK_STATUS = {
   REVOKED: 'REVOKED',
 }
 
-// Internal Task Status for UI
 export const UI_TASK_STATUS = {
   RUNNING: 'running',
   COMPLETED: 'completed',
   FAILED: 'failed',
 }
 
-// Tool IDs
 export const TOOL_IDS = {
   SUBDOMAIN: 'subdomain',
   NMAP: 'nmap',
@@ -29,7 +25,6 @@ export const TOOL_IDS = {
   PORTSCAN: 'portscan',
 }
 
-// Graph Node Positions
 export const NODE_POSITIONS = {
   DOMAIN: { x: 400, y: 50 },
   SUBDOMAIN: { x: 50, y: 200 },

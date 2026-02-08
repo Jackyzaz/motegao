@@ -1,46 +1,32 @@
-
-"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import api from '../lib/axios';
+"use client"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import api from "@/app/lib/axios"
+import { INPUT_STYLES } from "@/app/lib/styles"
 
 export default function RegisterPage() {
-  // สร้าง State ให้ครบตามฟิลด์ใน Swagger
-  const inputStyle = {
-    width: "100%",
-    padding: "12px",
-    marginBottom: "15px",
-    background: "#222831",
-    border: "1px solid #31363F",
-    color: "#76ABAE",
-    outline: "none",
-    textAlign: "center",
-    fontFamily: "monospace"
-  };
-
   const [formData, setFormData] = useState({
     email: "",
     username: "",
     first_name: "",
     last_name: "",
-    status: "active", // ค่า Default ตามที่คุณส่งมา
+    status: "active",
     password: "",
     confirm_password: ""
   });
 
-  const router = useRouter();
+  const router = useRouter()
 
   const handleRegister = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (formData.password !== formData.confirm_password) {
-      alert("Passwords do not match!");
-      return;
+      alert("Passwords do not match!")
+      return
     }
 
     try {
-      // 🎯 ส่งไปเฉพาะที่ Swagger บอกว่าต้องการเท่านั้น
       const payload = {
         email: formData.email,
         username: formData.username,
@@ -49,11 +35,11 @@ export default function RegisterPage() {
         status: "active",
         password: formData.password,
         confirm_password: formData.confirm_password,
-      };
+      }
 
-      console.log("Sending Payload:", payload); // ลองดูใน Console ว่าข้อมูลสวยไหม
+      console.log("Sending Payload:", payload)
 
-      const response = await api.post('/users/create', payload);
+      const response = await api.post('/users/create', payload)
 
       if (response.status >= 200 && response.status < 300) {
         alert("IDENTITY CREATED: สมัครสมาชิกสำเร็จ!");
@@ -72,12 +58,11 @@ export default function RegisterPage() {
         alert("Cannot connect to Server. Please check if FastAPI is running.");
       }
     }
-  };
+  }
 
-  // ฟังก์ชันช่วยอัปเดตค่าใน State
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#222831", padding: "20px" }}>
@@ -91,7 +76,7 @@ export default function RegisterPage() {
             placeholder="ASSIGN USERNAME"
             name="username"
             onChange={handleChange}
-            style={inputStyle}
+            style={INPUT_STYLES.base}
             required
           />
           <input
@@ -99,36 +84,33 @@ export default function RegisterPage() {
             placeholder="EMAIL ADDRESS"
             name="email"
             onChange={handleChange}
-            style={inputStyle}
+            style={INPUT_STYLES.base}
             required
           />
 
-          {/* แถวที่ 2: First Name & Last Name (แบ่งครึ่งเพื่อให้ฟอร์มไม่ยาวเกินไป) */}
           <div style={{ display: "flex", gap: "10px" }}>
             <input
               placeholder="FIRST NAME"
               name="first_name"
               onChange={handleChange}
-              style={{ ...inputStyle, flex: 1 }}
+              style={{ ...INPUT_STYLES.base, flex: 1 }}
               required
             />
             <input
               placeholder="LAST NAME"
               name="last_name"
               onChange={handleChange}
-              style={{ ...inputStyle, flex: 1 }}
+              style={{ ...INPUT_STYLES.base, flex: 1 }}
               required
             />
           </div>
 
-          {/* แถวที่ 3: Passwords */}
           <input
             type="password"
             placeholder="SET PASSWORD"
             name="password"
             onChange={handleChange}
-            // style={{ ...inputStyle, border: "1px solid #76ABAE" }}
-            style={{ ...inputStyle,}}
+            style={INPUT_STYLES.base}
             required
           />
           <input
@@ -136,7 +118,7 @@ export default function RegisterPage() {
             placeholder="CONFIRM PASSWORD"
             name="confirm_password"
             onChange={handleChange}
-            style={{ ...inputStyle,  }}
+            style={INPUT_STYLES.base}
             required
           />
 

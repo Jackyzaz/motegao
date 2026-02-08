@@ -1,7 +1,7 @@
 "use client"
-import { useSession } from "next-auth/react"
-import { useSearchParams } from "next/navigation" // ✅ เพิ่มเพื่อรับ ID
 import { useEffect, Suspense } from "react"
+import { useSession } from "next-auth/react"
+import { useSearchParams } from "next/navigation"
 
 import Topbar from "@/app/components/Topbar"
 import Canvas from "@/app/components/Canvas"
@@ -11,10 +11,8 @@ import { useMotegaoController } from "@/app/lib/motegao.controller"
 function CanvasContent() {
     const { data: session, status } = useSession()
     const searchParams = useSearchParams()
-    const projectId = searchParams.get("id") // ✅ ดึง ID จาก URL ที่ Dashboard ส่งมา
-    const controller = useMotegaoController(projectId);
+    const projectId = searchParams.get("id")
     const {
-        // ... ดึงตัวแปรจาก Controller เหมือนเดิม
         domains,
         showDomainModal,
         newDomainInput,
@@ -38,11 +36,9 @@ function CanvasContent() {
         handleSaveProject
     } = useMotegaoController(projectId)
 
-    // 📡 ฟังก์ชันดึงข้อมูลโปรเจกต์จริงจาก Database
     useEffect(() => {
         if (projectId && status === "authenticated") {
             console.log(`INITIALIZING PROJECT_ID: ${projectId}`)
-            // ในอนาคตคุณสามารถสั่ง fetch ข้อมูล nodes/edges ของ ID นี้มาแทน Mock ได้ที่นี่
         }
     }, [projectId, status])
 
@@ -57,7 +53,6 @@ function CanvasContent() {
     return (
         <>
             <div style={{ height: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#222831", color: "#EEEEEE" }}>
-                {/* ส่ง ID ไปโชว์บน Topbar ด้วยก็ได้ครับ */}
                 <Topbar
                     selectedDomain={selectedDomain}
                     onOpenDomainModal={() => setShowDomainModal(true)}

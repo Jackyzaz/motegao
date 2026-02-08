@@ -1,44 +1,31 @@
-"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { signIn } from "next-auth/react";
-import api from '../lib/axios';
+"use client"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { signIn } from "next-auth/react"
+import api from "@/app/lib/axios"
+import { INPUT_STYLES } from "@/app/lib/styles"
 
 export default function LoginPage() {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const router = useRouter();
+    const [username, setUsername] = useState("")
+    const [password, setPassword] = useState("")
+    const router = useRouter()
 
     const handleLogin = async (e) => {
-        e.preventDefault();
+        e.preventDefault()
 
-        // 🚀 ส่งข้อมูลไปให้ NextAuth (ซึ่งจะไปเรียก FastAPI ต่อ)
         const result = await signIn("credentials", {
             redirect: false,
             username: username,
             password: password,
-        });
+        })
 
         if (result?.ok) {
-            router.push("/");
+            router.push("/")
         } else {
-            // ดึงข้อความ Error มาโชว์ (ถ้ามี)
-            alert("ACCESS DENIED: Invalid Identity or Terminal Error.");
+            alert("ACCESS DENIED: Invalid Identity or Terminal Error.")
         }
-    };
-
-    const inputStyle = {
-        width: "100%",
-        padding: "12px",
-        marginBottom: "15px",
-        background: "#222831",
-        border: "1px solid #31363F",
-        color: "#76ABAE",
-        outline: "none",
-        textAlign: "center",
-        fontFamily: "monospace"
-    };
+    }
 
     return (
         <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#222831" }}>
@@ -52,7 +39,7 @@ export default function LoginPage() {
                         placeholder="ENTER USERNAME"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        style={inputStyle}
+                        style={INPUT_STYLES.base}
                     />
 
                     <input
@@ -60,7 +47,7 @@ export default function LoginPage() {
                         placeholder="ENTER PASSWORD"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        style={{ ...inputStyle, }}
+                        style={INPUT_STYLES.base}
                     />
 
                     <button style={{ width: "100%", padding: "12px", background: "#76ABAE", color: "#222831", border: "none", fontWeight: "bold", cursor: "pointer", letterSpacing: "2px" }}>
@@ -68,7 +55,6 @@ export default function LoginPage() {
                     </button>
                 </form>
 
-                {/* ... ส่วนของ Google Login และ Link ยังคงเดิม ... */}
                 <div style={{ margin: "20px 0", color: "#444" }}>OR</div>
                 <button
                     onClick={() => signIn('google', { callbackUrl: '/' })}

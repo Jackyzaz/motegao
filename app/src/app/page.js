@@ -1,28 +1,24 @@
 "use client"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react" // 1. นำเข้า useSession
+import { useSession } from "next-auth/react"
 
-import Topbar from "./components/Topbar"
-import Canvas from "./components/Canvas"
-import Tools from "./components/Tools"
+import Topbar from "@/app/components/Topbar"
+import Canvas from "@/app/components/Canvas"
+import Tools from "@/app/components/Tools"
 
 export default function Home() {
   const router = useRouter()
-  // 2. ดึงสถานะการล็อกอินจาก NextAuth
   const { data: session, status } = useSession()
 
-// ใน app/page.js
-useEffect(() => {
-  if (status === "authenticated") {
-    router.push("/dashboard") // เปลี่ยนจากอยู่ที่เดิมให้ไปหน้า Dashboard
-  } else if (status === "unauthenticated") {
-    router.push("/login")
-  }
-}, [status])
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/dashboard")
+    } else if (status === "unauthenticated") {
+      router.push("/login")
+    }
+  }, [status, router])
 
-  // 4. ระหว่างที่ status กำลังโหลด ("loading") ให้โชว์หน้าจอรอโหลดก่อน
-  // ป้องกันไม่ให้หน้าขาวหรือเด้งไปมา
   if (status === "loading") {
     return (
       <div style={{ 
@@ -38,7 +34,6 @@ useEffect(() => {
     )
   }
 
-  // 5. ถ้าผ่านเงื่อนไข (status === "authenticated") ค่อยแสดงหน้า Dashboard
   return (
     <div style={{ 
       height: "100vh", 

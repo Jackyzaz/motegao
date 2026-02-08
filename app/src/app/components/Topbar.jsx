@@ -1,11 +1,12 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
-import { useRouter } from 'next/navigation';
-import { ShieldPlus, FloppyDisk, CheckCircle, Circle } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation"
+import { ShieldPlus, FloppyDisk, CheckCircle, Circle } from "@phosphor-icons/react"
 
 export default function Topbar({ selectedDomain, onOpenDomainModal, projectId, onSave, saveStatus }) {
   const { data: session } = useSession()
-  const router = useRouter();
+  const router = useRouter()
+  
   return (
     <div style={{
       height: "60px",
@@ -16,7 +17,6 @@ export default function Topbar({ selectedDomain, onOpenDomainModal, projectId, o
       padding: "0 20px",
       borderBottom: "2px solid #76ABAE"
     }}>
-      {/* ด้านซ้าย: ปุ่มเลือกโดเมน */}
       <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
         <button 
           onClick={() => router.push('/dashboard')}
@@ -35,7 +35,6 @@ export default function Topbar({ selectedDomain, onOpenDomainModal, projectId, o
         MOTEGAO
         </button>
         
-        {/* Save button - only show when in project */}
         {projectId && onSave && (
           <button
             onClick={onSave}
@@ -70,7 +69,6 @@ export default function Topbar({ selectedDomain, onOpenDomainModal, projectId, o
         </div>
       </div>
 
-      {/* ด้านขวา: แสดงชื่อบัญชีจาก Google */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <div style={{ textAlign: "right", color: "#EEEEEE" }}>
           <div style={{ fontSize: "14px", fontWeight: "bold" }}>
@@ -81,7 +79,6 @@ export default function Topbar({ selectedDomain, onOpenDomainModal, projectId, o
           </div>
         </div>
 
-        {/* รูปโปรไฟล์ */}
         {session?.user?.image && (
           <img 
             src={session.user.image} 

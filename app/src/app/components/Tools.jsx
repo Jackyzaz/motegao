@@ -114,10 +114,8 @@ export default function Tools({
         margin: "8px 0" 
       }}></div>
 
-      {/* Tools Section */}
       <h2 style={{ color: "#76ABAE", fontSize: "1.2rem", marginBottom: 8 }}>Tools</h2>
       
-      {/* No domain selected warning */}
       {!selectedDomain && domains.length > 0 && (
         <div style={{
           padding: "15px",
@@ -133,7 +131,7 @@ export default function Tools({
         </div>
       )}
       
-      {/* ✅ Pass isAnyToolRunning and current tool's running status to each ToolBox */}
+
       {tools?.map(tool => {
         const isThisToolRunning = runningTasks[tool.id]?.status === UI_TASK_STATUS.RUNNING
         

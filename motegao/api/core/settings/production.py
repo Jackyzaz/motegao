@@ -15,8 +15,8 @@ class ProdAppSettings(AppSettings):
     OPENAPI_URL: str = "/openapi.json"
 
     ALLOWED_HOSTS: List[str] = [
-        "https://npspst.xyz",
-        "http://npspst.xyz",
+        "https://motegao.npspst.xyz",
+        "http://motegao.npspst.xyz",
     ]
 
     class Config(AppSettings.Config):

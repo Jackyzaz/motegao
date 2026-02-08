@@ -160,7 +160,7 @@ services:
       - ./certbot/www:/var/www/certbot
     # Initial command to get certificate - replace email and domain vars
     # Once you have certs, you might change this or just run it via docker compose run
-    command: certonly --webroot -w /var/www/certbot --force-renewal --email ${SSL_EMAIL} -d ${SSL_DOMAIN} --agree-tos --no-eff-email
+    command: certonly --webroot -w /var/www/certbot --force-renewal --email ${SSL_EMAIL} -d ${SSL_DOMAIN} --cert-name ${SSL_DOMAIN} --agree-tos --no-eff-email
 
 networks:
   motegao-network:

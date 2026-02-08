@@ -162,7 +162,6 @@ export default function Dashboard() {
         {/* Content */}
         <div style={{ flex: 1, padding: "40px", overflowY: "auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
-            <h2 style={{ color: "#EEEEEE" }}>AGENT : {session?.user?.name}</h2>
             <button
               onClick={createNewProject}
               style={{

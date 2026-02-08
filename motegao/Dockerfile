@@ -9,12 +9,11 @@ RUN apt-get update && apt-get install -y \
     nmap \
     dnsutils \
     curl \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Install gobuster
-RUN wget -q https://github.com/OJ/gobuster/releases/download/v3.6.0/gobuster_3.6.0_Linux_x86_64.tar.gz -O /tmp/gobuster.tar.gz \
-    && tar -xzf /tmp/gobuster.tar.gz -C /usr/local/bin gobuster \
+RUN curl -sL https://github.com/OJ/gobuster/releases/download/v3.6.0/gobuster_Linux_x86_64.tar.gz -o /tmp/gobuster.tar.gz \
+    && tar -xzf /tmp/gobuster.tar.gz -C /usr/local/bin \
     && chmod +x /usr/local/bin/gobuster \
     && rm /tmp/gobuster.tar.gz
 

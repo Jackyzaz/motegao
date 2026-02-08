@@ -119,7 +119,6 @@ export default function Dashboard() {
                 onClick={() => router.push(`/canvas?id=${proj.id || proj._id}`)}
               />
             ))}
-
             {projects.length === 0 && !loading && (
               <div style={{ color: "#444", gridColumn: "1/-1", textAlign: "center", marginTop: "50px", fontFamily: "monospace" }}>
                 [!] NO DATA FRAGMENTS FOUND. START A NEW SESSION.

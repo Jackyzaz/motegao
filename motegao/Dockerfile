@@ -4,6 +4,13 @@ FROM python:3.13-slim
 # Set the working directory in the container
 WORKDIR /app
 
+# Install nmap and other security tools for worker tasks
+RUN apt-get update && apt-get install -y \
+    nmap \
+    dnsutils \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the requirements file and install dependencies
 # This leverages Docker's cache, as requirements.txt changes less often than code
 COPY requirements.txt .

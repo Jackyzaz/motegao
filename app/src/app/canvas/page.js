@@ -1,16 +1,14 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation" // ✅ เพิ่มเพื่อรับ ID
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 
 import Topbar from "@/app/components/Topbar"
 import Canvas from "@/app/components/Canvas"
 import Tools from "@/app/components/Tools"
 import { useMotegaoController } from "@/app/lib/motegao.controller"
 
-export default function CanvasPage() {
-
-
+function CanvasContent() {
     const { data: session, status } = useSession()
     const searchParams = useSearchParams()
     const projectId = searchParams.get("id") // ✅ ดึง ID จาก URL ที่ Dashboard ส่งมา
@@ -175,5 +173,17 @@ export default function CanvasPage() {
                 </div>
             )}
         </>
+    )
+}
+
+export default function CanvasPage() {
+    return (
+        <Suspense fallback={
+            <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#222831", color: "#76ABAE" }}>
+                Loading...
+            </div>
+        }>
+            <CanvasContent />
+        </Suspense>
     )
 }

@@ -75,14 +75,17 @@ services:
       context: ./app
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://${SSL_DOMAIN}/api}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://${SSL_DOMAIN}/api/v1}
     env_file:
       - .env.production
     container_name: motegao-app-ssl
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://${SSL_DOMAIN}/api}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://${SSL_DOMAIN}/api/v1}
+      - INTERNAL_API_URL=http://api:8000/v1
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://${SSL_DOMAIN}}
     expose:
       - "3000"
     networks:

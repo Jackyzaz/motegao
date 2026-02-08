@@ -26,7 +26,7 @@ export default function Tools({
   selectedDomain = null,
   onSelectDomain,
   onOpenAddDomainModal
-}) {
+})  {
   // ✅ Check if any tool is currently running
   const isAnyToolRunning = Object.values(runningTasks).some(
     task => task?.status === UI_TASK_STATUS.RUNNING

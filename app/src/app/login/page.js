@@ -42,8 +42,8 @@ export default function LoginPage() {
 
     return (
         <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#222831" }}>
-            <div style={{ width: 350, padding: 40, background: "#31363F", borderRadius: 8, border: "1px solid #76ABAE", textAlign: "center" }}>
-                <h1 style={{ color: "#76ABAE", marginBottom: 10 }}>TERMINAL ACCESS</h1>
+            <div style={{ width: 350, padding: 40, background: "#31363F", borderRadius: 8, border: "1px solid #76ABAE", textAlign: "center",boxShadow: "0 0 20px rgba(118, 171, 174, 0.6), 0 0 40px rgba(118, 171, 174, 0.2)", }}>
+                <h1 style={{ color: "#76ABAE", marginBottom: 10 }}>MOTEGAO</h1>
                 <p style={{ color: "#EEEEEE", fontSize: "12px", marginBottom: 30 }}>IDENTITY VERIFICATION REQUIRED</p>
 
                 <form onSubmit={handleLogin}>
@@ -57,10 +57,10 @@ export default function LoginPage() {
 
                     <input
                         type="password"
-                        placeholder="ACCESS CODE"
+                        placeholder="ENTER PASSWORD"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        style={{ ...inputStyle, border: "1px solid #76ABAE" }}
+                        style={{ ...inputStyle, }}
                     />
 
                     <button style={{ width: "100%", padding: "12px", background: "#76ABAE", color: "#222831", border: "none", fontWeight: "bold", cursor: "pointer", letterSpacing: "2px" }}>

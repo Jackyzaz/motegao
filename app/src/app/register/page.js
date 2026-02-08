@@ -81,7 +81,7 @@ export default function RegisterPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#222831", padding: "20px" }}>
-      <div style={{ width: 400, padding: 40, background: "#31363F", borderRadius: 8, border: "1px solid #76ABAE", textAlign: "center" }}>
+      <div style={{ width: 400, padding: 40, background: "#31363F", borderRadius: 8, border: "1px solid #76ABAE", textAlign: "center",boxShadow: "0 0 20px rgba(118, 171, 174, 0.6), 0 0 40px rgba(118, 171, 174, 0.2)", }}>
         <h1 style={{ color: "#76ABAE", marginBottom: 10 }}>CREATE IDENTITY</h1>
         <p style={{ color: "#EEEEEE", fontSize: "11px", marginBottom: 25 }}>ENCRYPTING NEW USER DATA...</p>
 
@@ -124,18 +124,19 @@ export default function RegisterPage() {
           {/* แถวที่ 3: Passwords */}
           <input
             type="password"
-            placeholder="SET ACCESS CODE"
+            placeholder="SET PASSWORD"
             name="password"
             onChange={handleChange}
-            style={{ ...inputStyle, border: "1px solid #76ABAE" }}
+            // style={{ ...inputStyle, border: "1px solid #76ABAE" }}
+            style={{ ...inputStyle,}}
             required
           />
           <input
             type="password"
-            placeholder="CONFIRM ACCESS CODE"
+            placeholder="CONFIRM PASSWORD"
             name="confirm_password"
             onChange={handleChange}
-            style={{ ...inputStyle, border: "1px solid #76ABAE" }}
+            style={{ ...inputStyle,  }}
             required
           />
 

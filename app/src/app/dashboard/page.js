@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import Topbar from "../components/Topbar"
 import ProjectCard from "../components/ProjectCard"
 import api from "../lib/axios" // ✅ นำเข้า axios instance ของเรา
+import { House ,Folder,Gear} from "phosphor-react";
+
 
 export default function Dashboard() {
   const { data: session, status } = useSession()
@@ -80,11 +82,11 @@ export default function Dashboard() {
 
       <div style={{ display: "flex", height: "calc(100vh - 60px)" }}>
         {/* Sidebar */}
-        <div style={{ width: "240px", borderRight: "1px solid #31363F", padding: "20px", color: "#EEEEEE" }}>
+        <div style={{ width: "240px", borderRight: "1px solid #31363F", padding: "20px", color: "#EEEEEE", }}>
           <div style={{ marginBottom: "30px", fontSize: "12px", color: "#76ABAE", fontWeight: "bold" }}>SYSTEM MENU</div>
-          <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE" }}>🏠 Home</div>
-          <div style={{ marginBottom: "15px", cursor: "pointer" }}>📁 My Operations</div>
-          <div style={{ marginBottom: "15px", cursor: "pointer" }}>⚙️ Settings</div>
+          <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE",flexDirection: "row", display: "flex",fontSize: "15px", gap: "4px",color: "#A7DADC",}}> <House size={24} style={{ position: "relative", bottom: "3px" }}/> <span>Home</span></div>
+          <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE" ,flexDirection: "row", display: "flex",fontSize: "15px", gap: "4px",}}><Folder size={23} style={{ position: "relative", bottom: "3px" }}/> My Operations</div>
+          <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE",flexDirection: "row", display: "flex",fontSize: "15px", gap: "4px",}}><Gear size={23} style={{ position: "relative", bottom: "3px" }}/> Settings</div>
         </div>
 
         {/* Content */}

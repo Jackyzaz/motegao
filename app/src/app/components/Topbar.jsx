@@ -1,6 +1,7 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from 'next/navigation';
+import { ShieldPlus} from "phosphor-react";
 
 export default function Topbar({ selectedDomain, onOpenDomainModal }) {
   const { data: session } = useSession()
@@ -25,10 +26,13 @@ export default function Topbar({ selectedDomain, onOpenDomainModal }) {
             color: "#EEEEEE", 
             cursor: "pointer",
             padding: "5px 10px",
-            borderRadius: "4px"
+            display: "flex",
+            borderRadius: "4px",
+            gap: "4px"
           }}
         >
-          🖧 MOTEGAO
+        <ShieldPlus size={25} style={{ position: "relative", bottom: "1px" }} />
+        MOTEGAO
         </button>
         <div style={{ fontWeight: "bold", color: "#EEEEEE" }}>
           

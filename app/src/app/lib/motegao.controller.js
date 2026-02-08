@@ -348,6 +348,12 @@ export const useMotegaoController = (projectId) => {
             }))
 
             updateNodesWithResults(toolId, result)
+          } else if (status === TASK_STATUS.REVOKED) {
+            setRunningTasks(prev => ({
+              ...prev,
+              [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.FAILED, error: result }
+            }))
+            showError('Worker Task Revoked', `The worker task for ${toolId} was revoked. This usually means the worker failed or was terminated. Please try again.`)
           } else if (status === TASK_STATUS.FAILURE) {
             setRunningTasks(prev => ({
               ...prev,

@@ -15,7 +15,7 @@ jobs:
         with:
           host: ${{ secrets.GCP_HOST }}
           username: ${{ secrets.GCP_USERNAME }}
-          key: ${{ secrets.GCP_SSH_KEY }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
           port: 22
           script: |
             cd /home/${{ secrets.GCP_USERNAME }}/projects/motegao

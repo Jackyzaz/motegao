@@ -1,10 +1,12 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation"
+import { ShieldPlus, FloppyDisk, CheckCircle, Circle } from "@phosphor-icons/react"
 
-export default function Topbar({ selectedDomain, onOpenDomainModal }) {
+export default function Topbar({ selectedDomain, onOpenDomainModal, projectId, onSave, saveStatus }) {
   const { data: session } = useSession()
-  const router = useRouter();
+  const router = useRouter()
+  
   return (
     <div style={{
       height: "60px",
@@ -15,7 +17,6 @@ export default function Topbar({ selectedDomain, onOpenDomainModal }) {
       padding: "0 20px",
       borderBottom: "2px solid #76ABAE"
     }}>
-      {/* ด้านซ้าย: ปุ่มเลือกโดเมน */}
       <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
         <button 
           onClick={() => router.push('/dashboard')}
@@ -25,17 +26,49 @@ export default function Topbar({ selectedDomain, onOpenDomainModal }) {
             color: "#EEEEEE", 
             cursor: "pointer",
             padding: "5px 10px",
-            borderRadius: "4px"
+            display: "flex",
+            borderRadius: "4px",
+            gap: "4px"
           }}
         >
-          🖧 MOTEGAO
+        <ShieldPlus size={25} style={{ position: "relative", bottom: "1px" }} />
+        MOTEGAO
         </button>
+        
+        {projectId && onSave && (
+          <button
+            onClick={onSave}
+            disabled={saveStatus === "saving"}
+            style={{
+              background: saveStatus === "saved" ? "#50fa7b" : saveStatus === "saving" ? "#888" : "#76ABAE",
+              border: "none",
+              color: "#222831",
+              cursor: saveStatus === "saving" ? "not-allowed" : "pointer",
+              padding: "5px 12px",
+              display: "flex",
+              alignItems: "center",
+              borderRadius: "4px",
+              gap: "6px",
+              fontWeight: "bold",
+              fontSize: "12px",
+              transition: "all 0.3s"
+            }}
+          >
+            {saveStatus === "saved" ? (
+              <><CheckCircle size={18} /> SAVED</>
+            ) : saveStatus === "saving" ? (
+              <><Circle size={18} /> SAVING...</>
+            ) : (
+              <><FloppyDisk size={18} /> SAVE</>
+            )}
+          </button>
+        )}
+        
         <div style={{ fontWeight: "bold", color: "#EEEEEE" }}>
           
         </div>
       </div>
 
-      {/* ด้านขวา: แสดงชื่อบัญชีจาก Google */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <div style={{ textAlign: "right", color: "#EEEEEE" }}>
           <div style={{ fontSize: "14px", fontWeight: "bold" }}>
@@ -46,7 +79,6 @@ export default function Topbar({ selectedDomain, onOpenDomainModal }) {
           </div>
         </div>
 
-        {/* รูปโปรไฟล์ */}
         {session?.user?.image && (
           <img 
             src={session.user.image} 

@@ -24,15 +24,22 @@ export const useMotegaoController = (projectId) => {
   const [nodes, setNodes] = useState([])
   const [edges, setEdges] = useState([])
   const [runningTasks, setRunningTasks] = useState({})
+  const [saveStatus, setSaveStatus] = useState("saved") // "saved", "saving", "unsaved"
 
   // Graph handlers
   const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+      setSaveStatus("unsaved");
+    },
     []
   )
 
   const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    (changes) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+      setSaveStatus("unsaved");
+    },
     []
   )
 
@@ -43,35 +50,277 @@ export const useMotegaoController = (projectId) => {
       if (!projectId) return;
 
       try {
+        // Use authenticated endpoint
         const response = await api.get(`/projects/detail/${projectId}`);
         if (response.data) {
           // ถ้ามีข้อมูลใน DB ให้เอามาทับ Mock data
           const { nodes: savedNodes, edges: savedEdges } = response.data;
-          if (savedNodes) setNodes(savedNodes);
+          
+          if (savedNodes) {
+            // Clean loaded nodes - ensure labels are strings not React objects
+            const cleanedNodes = savedNodes.map(node => {
+              const cleanNode = { ...node };
+              
+              // Handle domainId if it's a MongoDB object
+              if (cleanNode.data?.domainId && typeof cleanNode.data.domainId === 'object' && cleanNode.data.domainId.$numberLong) {
+                cleanNode.data.domainId = parseInt(cleanNode.data.domainId.$numberLong);
+              }
+              
+              // Reconstruct labels based on node type
+              if (cleanNode.data) {
+                // For domain nodes
+                if (cleanNode.id.startsWith('domain-') && cleanNode.data.domainName) {
+                  cleanNode.data.label = `🎯 ${cleanNode.data.domainName}`;
+                }
+                // For subdomain result nodes
+                else if (cleanNode.data.toolType === 'subdomain') {
+                  const subdomains = cleanNode.data.subdomains || [];
+                  cleanNode.data.label = (
+                    <div style={{ textAlign: "left", fontSize: "11px" }}>
+                      <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Subdomains Found ({subdomains.length})</b>
+                      {subdomains.length > 0 ? (
+                        <table style={{
+                          width: "100%",
+                          borderCollapse: "collapse",
+                          fontSize: "10px",
+                          color: "#EEEEEE"
+                        }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid #76ABAE" }}>
+                              <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Subdomain</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {subdomains.map((subdomain, i) => (
+                              <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                                <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
+                                  {subdomain}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div style={{ color: "#EEEEEE" }}>No subdomains found</div>
+                      )}
+                    </div>
+                  );
+                }
+                // For pathfinder result nodes
+                else if (cleanNode.data.toolType === 'pathfinder') {
+                  if (cleanNode.data.isError) {
+                    cleanNode.data.label = (
+                      <div style={{ textAlign: "left", fontSize: "11px" }}>
+                        <b style={{ color: "#76ABAE" }}>Pathfinder Error</b>
+                        <div style={{ color: "#ff5555", fontSize: "10px", marginTop: "6px", wordBreak: "break-word" }}>
+                          {cleanNode.data.errorMessage || 'Unknown error'}
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    const paths = cleanNode.data.paths || [];
+                    cleanNode.data.label = (
+                      <div style={{ textAlign: "left", fontSize: "11px" }}>
+                        <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Paths Found ({paths.length})</b>
+                        {paths.length > 0 ? (
+                          <table style={{
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            fontSize: "10px",
+                            color: "#EEEEEE"
+                          }}>
+                            <thead>
+                              <tr style={{ borderBottom: "1px solid #76ABAE" }}>
+                                <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Path</th>
+                                <th style={{ padding: "4px", textAlign: "center", color: "#76ABAE", fontWeight: "bold" }}>Status</th>
+                                <th style={{ padding: "4px", textAlign: "right", color: "#76ABAE", fontWeight: "bold" }}>Size</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {paths.map((pathItem, i) => (
+                                <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                                  <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
+                                    {pathItem.path}
+                                  </td>
+                                  <td style={{ padding: "4px", textAlign: "center", color: "#EEEEEE" }}>
+                                    {pathItem.status_code}
+                                  </td>
+                                  <td style={{ padding: "4px", textAlign: "right", color: "#EEEEEE" }}>
+                                    {pathItem.size}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div style={{ color: "#EEEEEE" }}>No paths found</div>
+                        )}
+                      </div>
+                    );
+                  }
+                }
+                // For nmap result nodes
+                else if (cleanNode.data.toolType === 'nmap') {
+                  if (cleanNode.data.isError) {
+                    cleanNode.data.label = (
+                      <div style={{ textAlign: "left", fontSize: "11px" }}>
+                        <b style={{ color: "#76ABAE" }}>Nmap Scan</b>
+                        <div style={{ color: "#ff5555" }}>Error: Invalid command</div>
+                        <div style={{ color: "#EEEEEE", fontSize: "10px" }}>Check configuration</div>
+                      </div>
+                    );
+                  } else {
+                    const openPorts = cleanNode.data.openPorts || [];
+                    cleanNode.data.label = (
+                      <div style={{ textAlign: "left", fontSize: "11px" }}>
+                        <b style={{ color: "#76ABAE" }}>Nmap Scan</b>
+                        {openPorts.length > 0 ? (
+                          openPorts.slice(0, 5).map((port, i) => (
+                            <div key={i} style={{ color: "#50fa7b" }}>• {port}</div>
+                          ))
+                        ) : (
+                          <div style={{ color: "#EEEEEE" }}>Scan completed</div>
+                        )}
+                      </div>
+                    );
+                  }
+                }
+                // If label is still a serialized React object (old format), clean it
+                else if (cleanNode.data.label && typeof cleanNode.data.label === 'object' && (cleanNode.data.label.type || cleanNode.data.label.props || cleanNode.data.label._owner)) {
+                  cleanNode.data.label = 'Result Node';
+                }
+              }
+              
+              return cleanNode;
+            });
+            
+            setNodes(cleanedNodes);
+            
+            // Extract domain nodes and populate domains list
+            const domainNodes = cleanedNodes.filter(node => node.id.startsWith('domain-'));
+            const extractedDomains = domainNodes.map(node => {
+              const domainId = node.data?.domainId || parseInt(node.id.replace('domain-', ''));
+              return {
+                id: domainId,
+                name: node.data?.domainName || node.data?.label?.replace('🎯 ', '') || 'Unknown',
+                status: 'active'
+              };
+            });
+            
+            if (extractedDomains.length > 0) {
+              setDomains(extractedDomains);
+              console.log(`Loaded ${extractedDomains.length} domains from project`);
+            }
+          }
+          
           if (savedEdges) setEdges(savedEdges);
         }
       } catch (error) {
-        // ถ้าหาไม่เจอ (404) หรือ Error อื่นๆ ให้ใช้ Mock data เดิม
-        console.warn("PROJECT_NOT_FOUND_IN_DB, USING_LOCAL_STATE");
+        // ถ้าหาไม่เจอ (404/403) หรือ Error อื่นๆ ให้ใช้ Mock data เดิม
+        console.warn("PROJECT_NOT_FOUND_OR_UNAUTHORIZED, USING_LOCAL_STATE");
       }
     };
 
     loadProjectData();
   }, [projectId]);
 
+  // Handle browser close/refresh - warn and cancel tasks
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      const activeTasks = Object.entries(runningTasks).filter(
+        ([_, task]) => task.status === UI_TASK_STATUS.RUNNING && task.taskId
+      )
+
+      if (activeTasks.length > 0) {
+        // Cancel all running tasks
+        activeTasks.forEach(async ([_, task]) => {
+          try {
+            await api.get(`/commands/${task.taskId}/cancel`)
+          } catch (error) {
+            console.error(`Failed to cancel task on unload:`, error)
+          }
+        })
+
+        // Show browser warning
+        e.preventDefault()
+        e.returnValue = 'You have running tasks. They will be cancelled if you leave.'
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [runningTasks])
+
   const saveToDatabase = useCallback(async (currentNodes, currentEdges) => {
     if (!projectId) return;
     try {
+      setSaveStatus("saving");
+      
+      // Helper to check if value is a React element
+      const isReactElement = (obj) => {
+        return obj && typeof obj === 'object' && 
+               (obj.$$typeof || (obj.type && obj.props && (obj._owner !== undefined || obj._store !== undefined)));
+      };
+      
+      // Clean nodes before saving - remove React elements and keep only serializable data
+      const cleanNodes = currentNodes.map(node => {
+        const cleanNode = { 
+          id: node.id,
+          type: node.type,
+          position: node.position,
+          style: node.style,
+          width: node.width,
+          height: node.height,
+          selected: node.selected,
+          dragging: node.dragging,
+          data: {}
+        };
+        
+        // Handle node data
+        if (node.data) {
+          // Copy all properties except React elements
+          Object.keys(node.data).forEach(key => {
+            const value = node.data[key];
+            
+            // Skip React elements
+            if (isReactElement(value)) {
+              return;
+            }
+            
+            // Skip functions
+            if (typeof value === 'function') {
+              return;
+            }
+            
+            // Copy everything else (primitives, arrays, plain objects)
+            cleanNode.data[key] = value;
+          });
+          
+          // For domain nodes, ensure we have the essential data
+          if (node.id.startsWith('domain-')) {
+            cleanNode.data.domainId = node.data.domainId;
+            cleanNode.data.domainName = node.data.domainName;
+            cleanNode.data.label = `🎯 ${node.data.domainName}`;
+          }
+        }
+        
+        return cleanNode;
+      });
+      
       await api.put(`/projects/update/${projectId}`, {
-        nodes: currentNodes,
+        nodes: cleanNodes,
         edges: currentEdges,
-        lastModified: new Date().toLocaleDateString()
+        lastModified: new Date().toISOString()
       });
       console.log("DATABASE_SYNCHRONIZED");
+      setSaveStatus("saved");
     } catch (error) {
       console.error("AUTO_SAVE_ERROR:", error);
+      setSaveStatus("unsaved");
+      showError("Failed to save project");
     }
-  }, [projectId]);
+  }, [projectId, showError]);
 
   // Poll for task results
   useEffect(() => {
@@ -99,6 +348,12 @@ export const useMotegaoController = (projectId) => {
             }))
 
             updateNodesWithResults(toolId, result)
+          } else if (status === TASK_STATUS.REVOKED) {
+            setRunningTasks(prev => ({
+              ...prev,
+              [toolId]: { ...prev[toolId], status: UI_TASK_STATUS.FAILED, error: result }
+            }))
+            showError('Worker Task Revoked', `The worker task for ${toolId} was revoked. This usually means the worker failed or was terminated. Please try again.`)
           } else if (status === TASK_STATUS.FAILURE) {
             setRunningTasks(prev => ({
               ...prev,
@@ -112,6 +367,36 @@ export const useMotegaoController = (projectId) => {
     }, API_CONFIG.pollInterval)
 
     return () => clearInterval(interval)
+  }, [runningTasks])
+
+  // Cleanup: Cancel all running tasks when component unmounts or user leaves
+  useEffect(() => {
+    const cancelAllRunningTasks = async () => {
+      const activeTasks = Object.entries(runningTasks).filter(
+        ([_, task]) => task.status === UI_TASK_STATUS.RUNNING && task.taskId
+      )
+
+      if (activeTasks.length === 0) return
+
+      console.log(`Cancelling ${activeTasks.length} running tasks before exit...`)
+
+      // Cancel all tasks in parallel
+      const cancelPromises = activeTasks.map(async ([toolId, task]) => {
+        try {
+          await api.get(`/commands/${task.taskId}/cancel`)
+          console.log(`Task ${task.taskId} (${toolId}) cancelled`)
+        } catch (error) {
+          console.error(`Failed to cancel task ${task.taskId}:`, error)
+        }
+      })
+
+      await Promise.all(cancelPromises)
+    }
+
+    // Cleanup function called when component unmounts
+    return () => {
+      cancelAllRunningTasks()
+    }
   }, [runningTasks])
 
   // Update graph nodes with scan results
@@ -135,6 +420,9 @@ export const useMotegaoController = (projectId) => {
         newNode = {
           id: nodeId,
           data: {
+            toolType: 'nmap',
+            isError: true,
+            rawResult: result,
             label: (
               <div style={{ textAlign: "left", fontSize: "11px" }}>
                 <b style={{ color: "#76ABAE" }}>Nmap Scan</b>
@@ -158,6 +446,9 @@ export const useMotegaoController = (projectId) => {
         newNode = {
           id: nodeId,
           data: {
+            toolType: 'nmap',
+            openPorts: openPorts,
+            rawResult: result,
             label: (
               <div style={{ textAlign: "left", fontSize: "11px" }}>
                 <b style={{ color: "#76ABAE" }}>Nmap Scan</b>
@@ -191,6 +482,9 @@ export const useMotegaoController = (projectId) => {
       newNode = {
         id: nodeId,
         data: {
+          toolType: 'subdomain',
+          subdomains: subdomains,
+          rawResult: result,
           label: (
             <div style={{ textAlign: "left", fontSize: "11px" }}>
               <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Subdomains Found ({subdomains.length})</b>
@@ -243,6 +537,10 @@ export const useMotegaoController = (projectId) => {
         newNode = {
           id: nodeId,
           data: {
+            toolType: 'pathfinder',
+            isError: true,
+            errorMessage: result.error,
+            rawResult: result,
             label: (
               <div style={{ textAlign: "left", fontSize: "11px" }}>
                 <b style={{ color: "#76ABAE" }}>Pathfinder Error</b>
@@ -259,6 +557,9 @@ export const useMotegaoController = (projectId) => {
         newNode = {
           id: nodeId,
           data: {
+            toolType: 'pathfinder',
+            paths: paths,
+            rawResult: result,
             label: (
               <div style={{ textAlign: "left", fontSize: "11px" }}>
                 <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Paths Found ({paths.length})</b>
@@ -541,6 +842,12 @@ export const useMotegaoController = (projectId) => {
     }
   }, [selectedDomain, showError, showInfo])
 
+  // Manual save project
+  const handleSaveProject = useCallback(async () => {
+    await saveToDatabase(nodes, edges);
+    showInfo("Project saved successfully");
+  }, [nodes, edges, saveToDatabase, showInfo]);
+
   return {
     // State
     domains,
@@ -552,6 +859,7 @@ export const useMotegaoController = (projectId) => {
     nodes,
     edges,
     runningTasks,
+    saveStatus,
 
     // Setters
     setShowDomainModal,
@@ -570,5 +878,8 @@ export const useMotegaoController = (projectId) => {
     handleToggleTool,
     handleRunTool,
     handleCancelTask,
+    
+    // Save handler
+    handleSaveProject,
   }
 }

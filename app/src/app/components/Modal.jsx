@@ -54,7 +54,6 @@ export default function Modal({ isOpen, onClose, title, message, type = "info", 
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Title */}
         {title && (
           <h3 style={{ 
             color: getTypeColor(), 
@@ -70,7 +69,6 @@ export default function Modal({ isOpen, onClose, title, message, type = "info", 
           </h3>
         )}
 
-        {/* Message */}
         <p style={{ 
           color: "#EEEEEE", 
           marginBottom: "25px",
@@ -79,8 +77,7 @@ export default function Modal({ isOpen, onClose, title, message, type = "info", 
           {message}
         </p>
 
-        {/* Buttons */}
-        <div style={{ 
+        <div style={{
           display: "flex", 
           gap: "10px", 
           justifyContent: "flex-end" 

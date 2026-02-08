@@ -1,6 +1,7 @@
 "use client"
 import { createContext, useContext, useState, useCallback } from "react"
-import Modal from "@/app/components/Modal"
+import toast, { Toaster } from "react-hot-toast"
+import InputModal from "@/app/components/InputModal"
 
 const ModalContext = createContext()
 
@@ -13,82 +14,178 @@ export const useModal = () => {
 }
 
 export const ModalProvider = ({ children }) => {
-  const [modalState, setModalState] = useState({
+  const [inputModalState, setInputModalState] = useState({
     isOpen: false,
     title: "",
     message: "",
-    type: "info",
     confirmText: "OK",
-    showCancel: false,
+    inputValue: "",
+    placeholder: "Enter value...",
     onConfirm: null,
   })
 
-  const showModal = useCallback((config) => {
-    setModalState({
+  const showInputModal = useCallback((config) => {
+    setInputModalState({
       isOpen: true,
       title: config.title || "",
       message: config.message || "",
-      type: config.type || "info",
       confirmText: config.confirmText || "OK",
-      showCancel: config.showCancel || false,
+      inputValue: config.initialValue || "",
+      placeholder: config.placeholder || "Enter value...",
       onConfirm: config.onConfirm || null,
     })
   }, [])
 
-  const hideModal = useCallback(() => {
-    setModalState(prev => ({ ...prev, isOpen: false }))
+  const hideInputModal = useCallback(() => {
+    setInputModalState(prev => ({ ...prev, isOpen: false, inputValue: "" }))
   }, [])
 
-  // Convenience methods
+  const updateInputValue = useCallback((value) => {
+    setInputModalState(prev => ({ ...prev, inputValue: value }))
+  }, [])
+
   const showError = useCallback((message, title = "Error") => {
-    showModal({ type: "error", title, message })
-  }, [showModal])
+    toast.error(title ? `${title}: ${message}` : message, {
+      duration: 4000,
+      position: "top-right",
+      style: {
+        background: "#31363F",
+        color: "#EEEEEE",
+        border: "1px solid #ff5555",
+      },
+      iconTheme: {
+        primary: "#ff5555",
+        secondary: "#31363F",
+      },
+    })
+  }, [])
 
   const showSuccess = useCallback((message, title = "Success") => {
-    showModal({ type: "success", title, message })
-  }, [showModal])
+    toast.success(title ? `${title}: ${message}` : message, {
+      duration: 3000,
+      position: "top-right",
+      style: {
+        background: "#31363F",
+        color: "#EEEEEE",
+        border: "1px solid #50fa7b",
+      },
+      iconTheme: {
+        primary: "#50fa7b",
+        secondary: "#31363F",
+      },
+    })
+  }, [])
 
   const showWarning = useCallback((message, title = "Warning") => {
-    showModal({ type: "warning", title, message })
-  }, [showModal])
+    toast(title ? `${title}: ${message}` : message, {
+      duration: 4000,
+      position: "top-right",
+      icon: "⚠️",
+      style: {
+        background: "#31363F",
+        color: "#EEEEEE",
+        border: "1px solid #ffb86c",
+      },
+    })
+  }, [])
 
   const showInfo = useCallback((message, title = "Information") => {
-    showModal({ type: "info", title, message })
-  }, [showModal])
+    toast(title ? `${title}: ${message}` : message, {
+      duration: 3000,
+      position: "top-right",
+      icon: "ℹ️",
+      style: {
+        background: "#31363F",
+        color: "#EEEEEE",
+        border: "1px solid #76ABAE",
+      },
+    })
+  }, [])
 
   const showConfirm = useCallback((message, onConfirm, title = "Confirm") => {
-    showModal({ 
-      type: "warning", 
-      title, 
-      message, 
-      showCancel: true,
-      confirmText: "Confirm",
-      onConfirm 
-    })
-  }, [showModal])
+    const toastId = toast(
+      (t) => (
+        <div>
+          <div style={{ fontWeight: "bold", marginBottom: "8px" }}>
+            {title}
+          </div>
+          <div style={{ marginBottom: "12px" }}>{message}</div>
+          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+            <button
+              onClick={() => {
+                toast.dismiss(t.id)
+              }}
+              style={{
+                padding: "6px 12px",
+                background: "#222831",
+                color: "#EEEEEE",
+                border: "1px solid #76ABAE",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "12px",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                toast.dismiss(t.id)
+                if (onConfirm) onConfirm()
+              }}
+              style={{
+                padding: "6px 12px",
+                background: "#ffb86c",
+                color: "#222831",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                fontSize: "12px",
+              }}
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: Infinity,
+        position: "top-right",
+        style: {
+          background: "#31363F",
+          color: "#EEEEEE",
+          border: "1px solid #ffb86c",
+          maxWidth: "400px",
+        },
+      }
+    )
+  }, [])
 
   return (
     <ModalContext.Provider 
       value={{ 
-        showModal, 
-        hideModal, 
         showError, 
         showSuccess, 
         showWarning, 
         showInfo,
-        showConfirm 
+        showConfirm,
+        showInputModal,
+        hideInputModal
       }}
     >
+      <Toaster />
       {children}
-      <Modal
-        isOpen={modalState.isOpen}
-        onClose={hideModal}
-        title={modalState.title}
-        message={modalState.message}
-        type={modalState.type}
-        confirmText={modalState.confirmText}
-        showCancel={modalState.showCancel}
-        onConfirm={modalState.onConfirm}
+      
+      <InputModal
+        isOpen={inputModalState.isOpen}
+        onClose={hideInputModal}
+        title={inputModalState.title}
+        message={inputModalState.message}
+        confirmText={inputModalState.confirmText}
+        inputValue={inputModalState.inputValue}
+        onInputChange={updateInputValue}
+        placeholder={inputModalState.placeholder}
+        onConfirm={inputModalState.onConfirm}
       />
     </ModalContext.Provider>
   )

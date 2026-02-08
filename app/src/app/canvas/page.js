@@ -35,6 +35,7 @@ export default function CanvasPage() {
         handleSelectDomain,
         handleToggleTool,
         handleRunTool,
+        handleCancelTask
     } = useMotegaoController()
 
     // 📡 ฟังก์ชันดึงข้อมูลโปรเจกต์จริงจาก Database
@@ -80,6 +81,7 @@ export default function CanvasPage() {
                         enabledTools={enabledTools}
                         onToggleTool={handleToggleTool}
                         onRunTool={handleRunTool}
+                        onCancelTask={handleCancelTask}
                         runningTasks={runningTasks}
                         domains={domains}
                         selectedDomain={selectedDomain}

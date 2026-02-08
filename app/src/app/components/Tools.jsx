@@ -20,6 +20,7 @@ export default function Tools({
   enabledTools, 
   onToggleTool, 
   onRunTool, 
+  onCancelTask,
   runningTasks = {},
   domains = [],
   selectedDomain = null,
@@ -134,6 +135,7 @@ export default function Tools({
           isEnabled={enabledTools.includes(tool.id)}
           onToggle={() => onToggleTool(tool.id)}
           onRun={(config) => onRunTool(tool.id, config)}
+          onCancel={() => onCancelTask(tool.id)}
           taskStatus={runningTasks[tool.id]}
           disabled={!selectedDomain}
         />
@@ -142,7 +144,7 @@ export default function Tools({
   )
 }
 
-function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = false }) {
+function ToolBox({ tool, isEnabled, onToggle, onRun, onCancel, taskStatus, disabled = false }) {
   const wordlistOptions = tool.id === "subdomain" ? WORDLIST_SUDOMAINS : WORDLIST_DIRECTORIES
 
   const [selectedWordlist, setSelectedWordlist] = useState(wordlistOptions[0]?.id || null)
@@ -188,7 +190,7 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
 
   const handleCancel = () => {
     if (!isRunning) return
-    // onCancel() // Implement cancel logic if needed
+    onCancel()
   }
 
   const getButtonText = () => {
@@ -500,23 +502,25 @@ function ToolBox({ tool, isEnabled, onToggle, onRun, taskStatus, disabled = fals
         {getButtonText()}
       </button>
 
-      <button 
-        onClick={handleRun}
-        disabled={!isEnabled || isRunning || disabled}
-        style={{ 
-          marginTop: "8px",
-          width: "100%",
-          background: "#ff5555", 
-          display: isRunning ? "block" : "none",
-          border: "none", 
-          padding: "8px", 
-          borderRadius: 4, 
-          fontWeight: "bold",
-          transition: "all 0.2s"
-        }}
-      >
-        Cancel
-      </button>
+      {isRunning && (
+        <button 
+          onClick={handleCancel}
+          style={{ 
+            marginTop: "8px",
+            width: "100%",
+            background: "#ff5555", 
+            color: "#222831",
+            border: "none", 
+            padding: "8px", 
+            borderRadius: 4, 
+            fontWeight: "bold",
+            cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+        >
+          Cancel
+        </button>
+      )}
 
       {/* Show task info */}
       {taskStatus && (

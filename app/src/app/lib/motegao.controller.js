@@ -401,6 +401,44 @@ export const useMotegaoController = (projectId) => {
     )
   }, [])
 
+  const handleCancelTask = useCallback(async (toolId) => {
+    const task = runningTasks[toolId]
+    if (!task || !task.taskId) {
+      showError("No running task to cancel", "Cancel Failed")
+      return
+    }
+
+    try {
+      // Cancel the task and get any partial results
+      const response = await api.get(`/commands/${task.taskId}/cancel`)
+      const { status, result } = response.data
+      
+      // If we have partial results, update the graph with them
+      if (result && (result.subdomains?.length > 0 || result.paths?.length > 0 || result)) {
+        if (toolId === TOOL_IDS.SUBDOMAIN || toolId === TOOL_IDS.PATHFINDER) {
+          updateNodesWithResults(toolId, result)
+        }
+        showInfo("Task cancelled. Partial results have been saved.", "Task Cancelled")
+      } else {
+        showInfo("Task cancelled successfully", "Task Cancelled")
+      }
+
+      // Remove task from running tasks
+      setRunningTasks(prev => {
+        const newTasks = { ...prev }
+        delete newTasks[toolId]
+        return newTasks
+      })
+      
+    } catch (error) {
+      console.error(`Error cancelling task ${task.taskId}:`, error)
+      showError(
+        `Failed to cancel task: ${error.response?.data?.detail || error.message}`,
+        "Cancel Failed"
+      )
+    }
+  }, [runningTasks, showError, showInfo, updateNodesWithResults])
+
   const handleRunTool = useCallback(async (toolId, config) => {
     if (!selectedDomain) {
       showError("Please select a domain first", "No Domain Selected")
@@ -531,5 +569,6 @@ export const useMotegaoController = (projectId) => {
     // Tool handlers
     handleToggleTool,
     handleRunTool,
+    handleCancelTask,
   }
 }

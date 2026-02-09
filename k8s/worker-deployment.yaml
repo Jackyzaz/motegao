@@ -25,7 +25,11 @@ spec:
             ["celery", "-A", "motegao.celery.app", "worker", "--loglevel=info"]
           env:
             - name: CELERY_BROKER_URL
-              value: "amqp://guest:guest@rabbitmq:5672//"
+              value: "gcpubsub://projects/motegao"
+            - name: CELERY_BACKEND_URL
+              value: "gs://results-pubsub-motegao/tasks?gcs_project=motegao"
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/app/secrets/gcp-motegao-service-account.json"
             - name: MONGO_ROOT_USER
               valueFrom:
                 configMapKeyRef:
@@ -45,6 +49,10 @@ spec:
               value: "mongodb://$(MONGO_ROOT_USER):$(MONGO_ROOT_PASSWORD)@mongodb:27017/$(MONGO_DATABASE)?authSource=admin"
             - name: REDIS_URL
               value: "redis://redis:6379"
+          volumeMounts:
+            - name: gcp-credentials
+              mountPath: /app/secrets
+              readOnly: true
           resources:
             requests:
               memory: "256Mi"
@@ -52,3 +60,7 @@ spec:
             limits:
               memory: "1Gi"
               cpu: "1000m"
+      volumes:
+        - name: gcp-credentials
+          secret:
+            secretName: gcp-service-account

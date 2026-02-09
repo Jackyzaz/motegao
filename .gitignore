@@ -10,3 +10,5 @@ node_modules
 .env*
 app.css
 !.env.example
+secrets/
+gcp-motegao-service-account.json

@@ -25,11 +25,9 @@ jobs:
 
   deploy-workers:
     runs-on: ubuntu-latest
-    env:
-      WORKER_IPS: ${{ secrets.WORKER_IPS }}
     strategy:
       matrix:
-        worker_ip: ${{ fromJson(env.WORKER_IPS) }}
+        worker_ip: ["10.148.0.5", "10.148.0.6"]
       fail-fast: false
       max-parallel: 10
 

@@ -53,7 +53,8 @@ services:
       - APP_ENV=prod
       - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-motegaodb}?authSource=admin
       - REDIS_URL=redis://redis:6379
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_BROKER_URL=gcpubsub://projects/motegao
+      - CELERY_BACKEND_URL=gs://results-pubsub-motegao/tasks?gcs_project=motegao
       - SECRET_KEY=${SECRET_KEY}
       - ALLOWED_HOSTS=["*"]
     expose:

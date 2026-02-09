@@ -36,6 +36,10 @@ class User(schemas.users.User, Document):
     def verify_password(self, password):
         from werkzeug.security import check_password_hash
 
+        # OAuth users may not have a password set
+        if not self.password:
+            return False
+
         if check_password_hash(self.password, password):
             return True
         return False

@@ -52,11 +52,43 @@ const handler = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-      if (user) {
+    async jwt({ token, user, account, profile }) {
+      // Handle credential login (already has accessToken)
+      if (user?.accessToken) {
         token.accessToken = user.accessToken
         token.provider = account?.provider
+        return token
       }
+
+      // Handle Google OAuth - register/login with backend API
+      if (account?.provider === "google" && profile) {
+        try {
+          const apiUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/v1'
+          
+          // Try to register or login the Google user with backend
+          const response = await axios.post(`${apiUrl}/auth/google-login`, {
+            email: profile.email,
+            name: profile.name,
+            google_id: profile.sub,
+            picture: profile.picture
+          }, {
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            }
+          })
+
+          if (response.data.access_token) {
+            token.accessToken = response.data.access_token
+            token.provider = "google"
+          }
+        } catch (error) {
+          console.error("Google OAuth backend error:", error.response?.data || error.message)
+          // If backend call fails, return token without accessToken
+          // This will cause API calls to fail with 401
+        }
+      }
+
       return token
     },
     async session({ session, token }) {

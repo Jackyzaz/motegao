@@ -78,4 +78,10 @@ class TokenData(BaseModel):
 
 class ChangedPasswordUser(BaseModel):
     current_password: str
-    new_password: str
+
+
+class GoogleLoginRequest(BaseModel):
+    email: str
+    name: str
+    google_id: str
+    picture: str | None = None

@@ -6,11 +6,57 @@ import {
   TASK_STATUS,
   UI_TASK_STATUS,
   TOOL_IDS,
-  NODE_POSITIONS,
   NODE_STYLES,
   EDGE_STYLES,
   API_CONFIG
 } from "@/app/lib/config"
+
+// Dynamic positioning configuration
+const LAYOUT_CONFIG = {
+  DOMAIN_COLUMN_X: 400,
+  TOOL_RESULT_COLUMNS: {
+    subdomain: 50,
+    nmap: 750,
+    pathfinder: 1100,
+  },
+  VERTICAL_SPACING: 250,
+  HORIZONTAL_SPACING: 350,
+  NODE_HEIGHT: 200, // Approximate height for overlap detection
+  NODE_WIDTH: 300,  // Approximate width for overlap detection
+}
+
+// Helper function to calculate dynamic position
+const calculateDynamicPosition = (nodes, nodeType, toolId = null) => {
+  let baseX = LAYOUT_CONFIG.DOMAIN_COLUMN_X
+  
+  // Determine base X position based on node type
+  if (nodeType === 'domain') {
+    baseX = LAYOUT_CONFIG.DOMAIN_COLUMN_X
+  } else if (toolId && LAYOUT_CONFIG.TOOL_RESULT_COLUMNS[toolId]) {
+    baseX = LAYOUT_CONFIG.TOOL_RESULT_COLUMNS[toolId]
+  }
+  
+  // Find all nodes in the same column (similar X position)
+  const nodesInColumn = nodes.filter(n => {
+    const xDiff = Math.abs(n.position.x - baseX)
+    return xDiff < LAYOUT_CONFIG.HORIZONTAL_SPACING / 2
+  })
+  
+  // If no nodes in this column, start at top
+  if (nodesInColumn.length === 0) {
+    return { x: baseX, y: 50 }
+  }
+  
+  // Find the lowest Y position in this column
+  const occupiedYPositions = nodesInColumn.map(n => n.position.y)
+  const maxY = Math.max(...occupiedYPositions)
+  
+  // Place new node below the lowest one with spacing
+  return {
+    x: baseX,
+    y: maxY + LAYOUT_CONFIG.VERTICAL_SPACING
+  }
+}
 
 export const useMotegaoController = (projectId) => {
   const { showError, showInfo } = useModal()
@@ -45,6 +91,134 @@ export const useMotegaoController = (projectId) => {
     },
     []
   )
+
+  const saveToDatabase = useCallback(async (currentNodes, currentEdges) => {
+    if (!projectId) return;
+    try {
+      setSaveStatus("saving");
+      
+      // Helper to check if value is a React element
+      const isReactElement = (obj) => {
+        return obj && typeof obj === 'object' && 
+               (obj.$$typeof || (obj.type && obj.props && (obj._owner !== undefined || obj._store !== undefined)));
+      };
+      
+      // Clean nodes before saving - remove React elements and keep only serializable data
+      const cleanNodes = currentNodes.map(node => {
+        const cleanNode = { 
+          id: node.id,
+          type: node.type,
+          position: node.position,
+          style: node.style,
+          width: node.width,
+          height: node.height,
+          selected: node.selected,
+          dragging: node.dragging,
+          data: {}
+        };
+        
+        // Handle node data
+        if (node.data) {
+          // Copy all properties except React elements
+          Object.keys(node.data).forEach(key => {
+            const value = node.data[key];
+            
+            // Skip React elements
+            if (isReactElement(value)) {
+              return;
+            }
+            
+            // Skip functions
+            if (typeof value === 'function') {
+              return;
+            }
+            
+            // Copy everything else (primitives, arrays, plain objects)
+            cleanNode.data[key] = value;
+          });
+          
+          // For domain nodes, ensure we have the essential data
+          if (node.id.startsWith('domain-')) {
+            cleanNode.data.domainId = node.data.domainId;
+            cleanNode.data.domainName = node.data.domainName;
+            cleanNode.data.label = `🎯 ${node.data.domainName}`;
+          }
+        }
+        
+        return cleanNode;
+      });
+      
+      await api.put(`/projects/update/${projectId}`, {
+        nodes: cleanNodes,
+        edges: currentEdges,
+        lastModified: new Date().toISOString()
+      });
+      console.log("DATABASE_SYNCHRONIZED");
+      setSaveStatus("saved");
+    } catch (error) {
+      console.error("AUTO_SAVE_ERROR:", error);
+      setSaveStatus("unsaved");
+      showError("Failed to save project");
+    }
+  }, [projectId, showError]);
+
+  // Handle clicking on a subdomain to add it as a new domain node
+  const handleSubdomainClick = useCallback((subdomain, sourceNodeId) => {
+    // Check if this subdomain already exists as a domain
+    const existingDomain = domains.find(d => d.name === subdomain)
+    if (existingDomain) {
+      showInfo(`${subdomain} already exists as a domain`)
+      return
+    }
+
+    const newDomainId = Date.now()
+    const domainNodeId = `domain-${newDomainId}`
+
+    // Update all states together to avoid duplicate updates
+    setNodes(currentNodes => {
+      const position = calculateDynamicPosition(currentNodes, 'domain')
+
+      // Create new domain node
+      const newNode = {
+        id: domainNodeId,
+        type: "input",
+        data: {
+          label: `🎯 ${subdomain}`,
+          domainId: newDomainId,
+          domainName: subdomain
+        },
+        position,
+        style: NODE_STYLES.DOMAIN,
+      }
+
+      return [...currentNodes, newNode]
+    })
+
+    // Create edge from subdomain result node to new domain node
+    setEdges(prev => [...prev, {
+      id: `e-${sourceNodeId}-${domainNodeId}`,
+      source: sourceNodeId,
+      target: domainNodeId,
+      animated: true,
+      style: EDGE_STYLES.DEFAULT
+    }])
+
+    // Update domains list
+    setDomains(prev => [...prev, { id: newDomainId, name: subdomain, status: "active" }])
+
+    // Save to database
+    setTimeout(() => {
+      setNodes(currentNodes => {
+        setEdges(currentEdges => {
+          saveToDatabase(currentNodes, currentEdges)
+          return currentEdges
+        })
+        return currentNodes
+      })
+    }, 0)
+
+    showInfo(`Added ${subdomain} as a new domain`)
+  }, [domains, saveToDatabase, showInfo])
 
   // ----
   useEffect(() => {
@@ -90,12 +264,31 @@ export const useMotegaoController = (projectId) => {
                         }}>
                           <thead>
                             <tr style={{ borderBottom: "1px solid #76ABAE" }}>
-                              <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Subdomain</th>
+                              <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>
+                                Subdomain (click to add)
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             {subdomains.map((subdomain, i) => (
-                              <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                              <tr 
+                                key={i} 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSubdomainClick(subdomain, cleanNode.id)
+                                }}
+                                style={{ 
+                                  borderBottom: "1px solid #31363F",
+                                  cursor: "pointer",
+                                  transition: "background-color 0.2s"
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = "#31363F"
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "transparent"
+                                }}
+                              >
                                 <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
                                   {subdomain}
                                 </td>
@@ -255,76 +448,6 @@ export const useMotegaoController = (projectId) => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, []) // Empty dependency - uses ref which always has latest value
 
-  const saveToDatabase = useCallback(async (currentNodes, currentEdges) => {
-    if (!projectId) return;
-    try {
-      setSaveStatus("saving");
-      
-      // Helper to check if value is a React element
-      const isReactElement = (obj) => {
-        return obj && typeof obj === 'object' && 
-               (obj.$$typeof || (obj.type && obj.props && (obj._owner !== undefined || obj._store !== undefined)));
-      };
-      
-      // Clean nodes before saving - remove React elements and keep only serializable data
-      const cleanNodes = currentNodes.map(node => {
-        const cleanNode = { 
-          id: node.id,
-          type: node.type,
-          position: node.position,
-          style: node.style,
-          width: node.width,
-          height: node.height,
-          selected: node.selected,
-          dragging: node.dragging,
-          data: {}
-        };
-        
-        // Handle node data
-        if (node.data) {
-          // Copy all properties except React elements
-          Object.keys(node.data).forEach(key => {
-            const value = node.data[key];
-            
-            // Skip React elements
-            if (isReactElement(value)) {
-              return;
-            }
-            
-            // Skip functions
-            if (typeof value === 'function') {
-              return;
-            }
-            
-            // Copy everything else (primitives, arrays, plain objects)
-            cleanNode.data[key] = value;
-          });
-          
-          // For domain nodes, ensure we have the essential data
-          if (node.id.startsWith('domain-')) {
-            cleanNode.data.domainId = node.data.domainId;
-            cleanNode.data.domainName = node.data.domainName;
-            cleanNode.data.label = `🎯 ${node.data.domainName}`;
-          }
-        }
-        
-        return cleanNode;
-      });
-      
-      await api.put(`/projects/update/${projectId}`, {
-        nodes: cleanNodes,
-        edges: currentEdges,
-        lastModified: new Date().toISOString()
-      });
-      console.log("DATABASE_SYNCHRONIZED");
-      setSaveStatus("saved");
-    } catch (error) {
-      console.error("AUTO_SAVE_ERROR:", error);
-      setSaveStatus("unsaved");
-      showError("Failed to save project");
-    }
-  }, [projectId, showError]);
-
   // Poll for task results
   useEffect(() => {
     const activeTasks = Object.entries(runningTasks).filter(
@@ -408,7 +531,7 @@ export const useMotegaoController = (projectId) => {
   }, []) // Empty dependency array - only runs on mount/unmount
 
   // Update graph nodes with scan results
-  const updateNodesWithResults = useCallback((toolId, result) => {
+  const updateNodesWithResults = useCallback((toolId, result, onSubdomainClick) => {
     console.log(`Results for ${toolId}:`, result)
 
     setScanResults({
@@ -439,7 +562,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.NMAP,
+          position: { x: 0, y: 0 }, // Will be calculated dynamically
           style: NODE_STYLES.ERROR,
         }
       } else {
@@ -470,7 +593,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.NMAP,
+          position: { x: 0, y: 0 }, // Will be calculated dynamically
           style: { ...NODE_STYLES.RESULT, width: 200 },
         }
       }
@@ -493,6 +616,7 @@ export const useMotegaoController = (projectId) => {
           toolType: 'subdomain',
           subdomains: subdomains,
           rawResult: result,
+          onSubdomainClick: handleSubdomainClick,
           label: (
             <div style={{ textAlign: "left", fontSize: "11px" }}>
               <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Subdomains Found ({subdomains.length})</b>
@@ -505,12 +629,31 @@ export const useMotegaoController = (projectId) => {
                 }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid #76ABAE" }}>
-                      <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Subdomain</th>
+                      <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>
+                        Subdomain (click to add)
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {subdomains.map((subdomain, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                      <tr 
+                        key={i} 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleSubdomainClick(subdomain, nodeId)
+                        }}
+                        style={{ 
+                          borderBottom: "1px solid #31363F",
+                          cursor: "pointer",
+                          transition: "background-color 0.2s"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "#31363F"
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent"
+                        }}
+                      >
                         <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
                           {subdomain}
                         </td>
@@ -524,7 +667,7 @@ export const useMotegaoController = (projectId) => {
             </div>
           ),
         },
-        position: NODE_POSITIONS.SUBDOMAIN,
+        position: { x: 0, y: 0 }, // Will be calculated dynamically
         style: { ...NODE_STYLES.RESULT, width: 280 },
       }
 
@@ -558,7 +701,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.SUBDOMAIN,
+          position: { x: 0, y: 0 }, // Will be calculated dynamically
           style: NODE_STYLES.ERROR,
         }
       } else {
@@ -607,7 +750,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.SUBDOMAIN,
+          position: { x: 0, y: 0 }, // Will be calculated dynamically
           style: { ...NODE_STYLES.RESULT, width: 300 },
         }
       }
@@ -623,52 +766,83 @@ export const useMotegaoController = (projectId) => {
     }
 
     if (newNode) {
-      setNodes(prev => [...prev, newNode])
+      setNodes(prev => {
+        // Determine tool type from node ID
+        const toolType = newNode.id.split('-')[0] // 'nmap', 'subdomain', or 'pathfinder'
+        
+        // Calculate dynamic position to prevent overlap
+        const position = calculateDynamicPosition(prev, 'tool', toolType)
+        
+        // Update node with calculated position
+        const nodeWithPosition = {
+          ...newNode,
+          position
+        }
+        
+        return [...prev, nodeWithPosition]
+      })
     }
     if (newEdge) {
       setEdges(prev => [...prev, newEdge])
     }
   }, [selectedDomain])
 
+  const isDomainOnCanvas = useCallback((domainName) => {
+    const normalized = domainName.trim().toLowerCase()
+
+    return nodes.some(node =>
+      node.id.startsWith("domain-") &&
+      node.data?.domainName?.toLowerCase() === normalized
+    )
+  }, [nodes])
+
   // Domain handlers
   const handleAddDomain = useCallback(() => {
-    if (!newDomainInput.trim()) return;
+    const domain = newDomainInput.trim()
+    if (!domain) return
+
+    // 🚫 DUPLICATE CHECK (canvas-based)
+    if (isDomainOnCanvas(domain)) {
+      showInfo(`Domain "${domain}" already exists on canvas`)
+      return
+    }
 
     const newDomainId = Date.now();
     const domainNodeId = `domain-${newDomainId}`;
-    const yPosition = domains.length * 200;
 
-    // 1. สร้าง Object ของ Node ใหม่เตรียมไว้ตัวเดียว
-    const newNode = {
-      id: domainNodeId,
-      type: "input",
-      data: {
-        label: `🎯 ${newDomainInput.trim()}`,
-        domainId: newDomainId,
-        domainName: newDomainInput.trim()
-      },
-      position: { x: NODE_POSITIONS.DOMAIN.x, y: yPosition },
-      style: NODE_STYLES.DOMAIN,
-    };
-
-    // 2. อัปเดต Domains List
-    setDomains(prev => [...prev, { id: newDomainId, name: newDomainInput.trim(), status: "active" }]);
-
-    // 3. อัปเดต Nodes และสั่ง Save ในที่เดียว
     setNodes(prev => {
+      // Calculate dynamic position based on existing domain nodes
+      const position = calculateDynamicPosition(prev, 'domain');
+
+      // Create new domain node with dynamic position
+      const newNode = {
+        id: domainNodeId,
+        type: "input",
+        data: {
+          label: `🎯 ${newDomainInput.trim()}`,
+          domainId: newDomainId,
+          domainName: newDomainInput.trim()
+        },
+        position,
+        style: NODE_STYLES.DOMAIN,
+      };
+
       const updatedNodes = [...prev, newNode];
 
-      // 🚀 สั่งเซฟลง Database ทันทีโดยใช้ค่าล่าสุดที่เพิ่งรวมเสร็จ
+      // Save to database with updated nodes
       saveToDatabase(updatedNodes, edges);
 
       return updatedNodes;
     });
 
-    // 4. ล้างค่า Input และปิด Modal
+    // Update domains list
+    setDomains(prev => [...prev, { id: newDomainId, name: newDomainInput.trim(), status: "active" }]);
+
+    // Reset input and close modal
     setNewDomainInput("");
     setShowDomainModal(false);
 
-  }, [newDomainInput, domains.length, edges, saveToDatabase]); // ✅ ถอด nodes ออกจาก dependency เพื่อลดการรันซ้ำโดยไม่จำเป็น
+  }, [newDomainInput, edges, saveToDatabase]);
 
   const handleSelectDomain = useCallback((domain) => {
     setSelectedDomain(domain)
@@ -856,6 +1030,44 @@ export const useMotegaoController = (projectId) => {
     showInfo("Project saved successfully");
   }, [nodes, edges, saveToDatabase, showInfo]);
 
+  // Delete node handler
+  const handleDeleteNode = useCallback((nodeId) => {
+    // Find all edges connected to this node
+    const connectedEdges = edges.filter(
+      edge => edge.source === nodeId || edge.target === nodeId
+    )
+    
+    // Remove the node and its connected edges
+    setNodes(prev => {
+      const updatedNodes = prev.filter(n => n.id !== nodeId)
+      
+      // If it's a domain node, also remove it from domains list
+      if (nodeId.startsWith('domain-')) {
+        const node = prev.find(n => n.id === nodeId)
+        if (node?.data?.domainId) {
+          setDomains(prevDomains => prevDomains.filter(d => d.id !== node.data.domainId))
+          
+          // If this was the selected domain, clear selection
+          if (selectedDomain?.id === node.data.domainId) {
+            setSelectedDomain(null)
+            setScanResults(null)
+          }
+        }
+      }
+      
+      // Save to database with updated nodes and edges
+      const updatedEdges = edges.filter(
+        edge => edge.source !== nodeId && edge.target !== nodeId
+      )
+      setEdges(updatedEdges)
+      saveToDatabase(updatedNodes, updatedEdges)
+      
+      return updatedNodes
+    })
+    
+    showInfo("Node deleted successfully")
+  }, [nodes, edges, selectedDomain, saveToDatabase, showInfo])
+
   return {
     // State
     domains,
@@ -877,6 +1089,8 @@ export const useMotegaoController = (projectId) => {
     onNodesChange,
     onEdgesChange,
     handleNodeClick,
+    handleSubdomainClick,
+    handleDeleteNode,
 
     // Domain handlers
     handleAddDomain,

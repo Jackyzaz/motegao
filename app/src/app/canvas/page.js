@@ -28,6 +28,7 @@ function CanvasContent() {
         onNodesChange,
         onEdgesChange,
         handleNodeClick,
+        handleDeleteNode,
         handleAddDomain,
         handleSelectDomain,
         handleToggleTool,
@@ -67,6 +68,7 @@ function CanvasContent() {
                         onNodesChange={onNodesChange}
                         onEdgesChange={onEdgesChange}
                         onNodeClick={handleNodeClick}
+                        onDeleteNode={handleDeleteNode}
                         scanResults={scanResults}
                     />
                     <Tools

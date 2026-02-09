@@ -934,6 +934,44 @@ export const useMotegaoController = (projectId) => {
     showInfo("Project saved successfully");
   }, [nodes, edges, saveToDatabase, showInfo]);
 
+  // Delete node handler
+  const handleDeleteNode = useCallback((nodeId) => {
+    // Find all edges connected to this node
+    const connectedEdges = edges.filter(
+      edge => edge.source === nodeId || edge.target === nodeId
+    )
+    
+    // Remove the node and its connected edges
+    setNodes(prev => {
+      const updatedNodes = prev.filter(n => n.id !== nodeId)
+      
+      // If it's a domain node, also remove it from domains list
+      if (nodeId.startsWith('domain-')) {
+        const node = prev.find(n => n.id === nodeId)
+        if (node?.data?.domainId) {
+          setDomains(prevDomains => prevDomains.filter(d => d.id !== node.data.domainId))
+          
+          // If this was the selected domain, clear selection
+          if (selectedDomain?.id === node.data.domainId) {
+            setSelectedDomain(null)
+            setScanResults(null)
+          }
+        }
+      }
+      
+      // Save to database with updated nodes and edges
+      const updatedEdges = edges.filter(
+        edge => edge.source !== nodeId && edge.target !== nodeId
+      )
+      setEdges(updatedEdges)
+      saveToDatabase(updatedNodes, updatedEdges)
+      
+      return updatedNodes
+    })
+    
+    showInfo("Node deleted successfully")
+  }, [nodes, edges, selectedDomain, saveToDatabase, showInfo])
+
   return {
     // State
     domains,
@@ -956,6 +994,7 @@ export const useMotegaoController = (projectId) => {
     onEdgesChange,
     handleNodeClick,
     handleSubdomainClick,
+    handleDeleteNode,
 
     // Domain handlers
     handleAddDomain,

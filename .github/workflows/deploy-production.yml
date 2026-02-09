@@ -28,7 +28,7 @@ jobs:
     environment: production
     strategy:
       matrix:
-        worker_ip: ${{ fromJson(vars.WORKER_IPS) }}
+        worker_ip: ${{ fromJson(vars.WORKER_IPS || '["10.148.0.5", "10.148.0.6"]') }}
       fail-fast: false
       max-parallel: 10
 

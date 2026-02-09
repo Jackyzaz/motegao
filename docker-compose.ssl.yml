@@ -140,9 +140,6 @@ services:
       - ./gcp-motegao-service-account.json:/app/secrets/gcp-motegao-service-account.json:ro
     networks:
       - motegao-network
-    depends_on:
-      - mongodb
-      - redis
 
   nginx:
     image: nginx:alpine

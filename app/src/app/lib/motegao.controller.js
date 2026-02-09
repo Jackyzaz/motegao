@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { applyEdgeChanges, applyNodeChanges } from "reactflow"
 import api from "@/app/lib/axios"
 import { useModal } from "@/app/context/ModalContext"
@@ -25,6 +25,9 @@ export const useMotegaoController = (projectId) => {
   const [edges, setEdges] = useState([])
   const [runningTasks, setRunningTasks] = useState({})
   const [saveStatus, setSaveStatus] = useState("saved") // "saved", "saving", "unsaved"
+  
+  // Ref to track running tasks for cleanup without triggering re-renders
+  const runningTasksRef = useRef({})
 
   // Graph handlers
   const onNodesChange = useCallback(
@@ -227,7 +230,7 @@ export const useMotegaoController = (projectId) => {
   // Handle browser close/refresh - warn and cancel tasks
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      const activeTasks = Object.entries(runningTasks).filter(
+      const activeTasks = Object.entries(runningTasksRef.current).filter(
         ([_, task]) => task.status === UI_TASK_STATUS.RUNNING && task.taskId
       )
 
@@ -250,7 +253,7 @@ export const useMotegaoController = (projectId) => {
 
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [runningTasks])
+  }, []) // Empty dependency - uses ref which always has latest value
 
   const saveToDatabase = useCallback(async (currentNodes, currentEdges) => {
     if (!projectId) return;
@@ -369,35 +372,40 @@ export const useMotegaoController = (projectId) => {
     return () => clearInterval(interval)
   }, [runningTasks])
 
-  // Cleanup: Cancel all running tasks when component unmounts or user leaves
+  // Keep ref in sync with state
   useEffect(() => {
-    const cancelAllRunningTasks = async () => {
-      const activeTasks = Object.entries(runningTasks).filter(
-        ([_, task]) => task.status === UI_TASK_STATUS.RUNNING && task.taskId
-      )
+    runningTasksRef.current = runningTasks
+  }, [runningTasks])
 
-      if (activeTasks.length === 0) return
-
-      console.log(`Cancelling ${activeTasks.length} running tasks before exit...`)
-
-      // Cancel all tasks in parallel
-      const cancelPromises = activeTasks.map(async ([toolId, task]) => {
-        try {
-          await api.get(`/commands/${task.taskId}/cancel`)
-          console.log(`Task ${task.taskId} (${toolId}) cancelled`)
-        } catch (error) {
-          console.error(`Failed to cancel task ${task.taskId}:`, error)
-        }
-      })
-
-      await Promise.all(cancelPromises)
-    }
-
+  // Cleanup: Cancel all running tasks ONLY when component unmounts
+  useEffect(() => {
     // Cleanup function called when component unmounts
     return () => {
+      const cancelAllRunningTasks = async () => {
+        const activeTasks = Object.entries(runningTasksRef.current).filter(
+          ([_, task]) => task.status === UI_TASK_STATUS.RUNNING && task.taskId
+        )
+
+        if (activeTasks.length === 0) return
+
+        console.log(`Component unmounting: Cancelling ${activeTasks.length} running tasks...`)
+
+        // Cancel all tasks in parallel
+        const cancelPromises = activeTasks.map(async ([toolId, task]) => {
+          try {
+            await api.get(`/commands/${task.taskId}/cancel`)
+            console.log(`Task ${task.taskId} (${toolId}) cancelled on unmount`)
+          } catch (error) {
+            console.error(`Failed to cancel task ${task.taskId}:`, error)
+          }
+        })
+
+        await Promise.all(cancelPromises)
+      }
+      
       cancelAllRunningTasks()
     }
-  }, [runningTasks])
+  }, []) // Empty dependency array - only runs on mount/unmount
 
   // Update graph nodes with scan results
   const updateNodesWithResults = useCallback((toolId, result) => {

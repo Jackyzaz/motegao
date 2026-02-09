@@ -4,7 +4,10 @@ import { ModalProvider } from "@/app/context/ModalContext"
 
 export function Providers({ children }) {
   return (
-    <SessionProvider>
+    <SessionProvider
+      refetchInterval={0}
+      refetchOnWindowFocus={false}
+    >
       <ModalProvider>
         {children}
       </ModalProvider>

@@ -7,6 +7,7 @@ resources:
   - namespace.yaml
   - configmap.yaml
   - secrets.yaml
+  - gcp-credentials-secret.yaml
   - persistent-volumes.yaml
   - mongodb-deployment.yaml
   - redis-deployment.yaml

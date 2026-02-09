@@ -50,12 +50,16 @@ services:
     container_name: motegao-api-ssl
     restart: unless-stopped
     environment:
-      - ENV=production
+      - APP_ENV=prod
       - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-motegaodb}?authSource=admin
       - REDIS_URL=redis://redis:6379
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_BROKER_URL=gcpubsub://projects/motegao
+      - CELERY_BACKEND_URL=gs://results-pubsub-motegao/tasks?gcs_project=motegao
       - SECRET_KEY=${SECRET_KEY}
       - ALLOWED_HOSTS=["*"]
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-motegao-service-account.json
+    volumes:
+      - ./gcp-motegao-service-account.json:/app/secrets/gcp-motegao-service-account.json:ro
     expose:
       - "8000"
     networks:
@@ -99,23 +103,23 @@ services:
       retries: 3
       start_period: 40s
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: motegao-rabbitmq-ssl
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - motegao-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   container_name: motegao-rabbitmq-ssl
+  #   restart: unless-stopped
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: guest
+  #     RABBITMQ_DEFAULT_PASS: guest
+  #   volumes:
+  #     - rabbitmq_data:/var/lib/rabbitmq
+  #   networks:
+  #     - motegao-network
+  #   healthcheck:
+  #     test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
   worker:
     build:
@@ -125,13 +129,20 @@ services:
       - .env.production
     container_name: motegao-worker-ssl
     restart: unless-stopped
-    command: celery -A motegao.celery.app worker --loglevel=info --pool=prefork --concurrency=4 --max-tasks-per-child=100
+    command: celery -A motegao.celery.app worker --loglevel=info
     environment:
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_BROKER_URL=gcpubsub://projects/motegao
+      - CELERY_BACKEND_URL=gs://results-pubsub-motegao/tasks?gcs_project=motegao
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-motegao-service-account.json
+      - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-motegaodb}?authSource=admin
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./gcp-motegao-service-account.json:/app/secrets/gcp-motegao-service-account.json:ro
     networks:
       - motegao-network
     depends_on:
-      - rabbitmq
+      - mongodb
+      - redis
 
   nginx:
     image: nginx:alpine
@@ -151,6 +162,12 @@ services:
     depends_on:
       - api
       - app
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   certbot:
     image: certbot/certbot
@@ -173,5 +190,5 @@ volumes:
     driver: local
   redis_data:
     driver: local
-  rabbitmq_data:
-    driver: local
+  # rabbitmq_data:
+  #   driver: local

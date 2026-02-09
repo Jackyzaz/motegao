@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  deploy:
+  deploy-app:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,4 +21,28 @@ jobs:
             cd /home/${{ secrets.GCP_USERNAME }}/projects/motegao
             git pull origin main
             git checkout main
-            docker compose --env-file .env.production -f docker-compose.ssl.yml up -d --build
+            docker compose --env-file .env.production -f docker-compose.ssl.yml up -d --build mongodb redis api app nginx certbot
+
+  deploy-workers:
+    runs-on: ubuntu-latest
+    environment: production
+    strategy:
+      matrix:
+        worker_ip: ${{ fromJson(vars.WORKER_IPS) }}
+      fail-fast: false
+      max-parallel: 10
+
+    steps:
+      - name: Deploy Worker ${{ matrix.worker_ip }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            ssh -o StrictHostKeyChecking=no dev@${{ matrix.worker_ip }} << 'ENDSSH'
+              cd ~/motegao
+              git pull origin main
+              docker compose -f docker-compose.production.yml up -d --build worker
+            ENDSSH

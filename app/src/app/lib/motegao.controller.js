@@ -6,11 +6,57 @@ import {
   TASK_STATUS,
   UI_TASK_STATUS,
   TOOL_IDS,
-  NODE_POSITIONS,
   NODE_STYLES,
   EDGE_STYLES,
   API_CONFIG
 } from "@/app/lib/config"
+
+// Dynamic positioning configuration
+const LAYOUT_CONFIG = {
+  DOMAIN_COLUMN_X: 400,
+  TOOL_RESULT_COLUMNS: {
+    subdomain: 50,
+    nmap: 750,
+    pathfinder: 1100,
+  },
+  VERTICAL_SPACING: 250,
+  HORIZONTAL_SPACING: 350,
+  NODE_HEIGHT: 200, // Approximate height for overlap detection
+  NODE_WIDTH: 300,  // Approximate width for overlap detection
+}
+
+// Helper function to calculate dynamic position
+const calculateDynamicPosition = (nodes, nodeType, toolId = null) => {
+  let baseX = LAYOUT_CONFIG.DOMAIN_COLUMN_X
+  
+  // Determine base X position based on node type
+  if (nodeType === 'domain') {
+    baseX = LAYOUT_CONFIG.DOMAIN_COLUMN_X
+  } else if (toolId && LAYOUT_CONFIG.TOOL_RESULT_COLUMNS[toolId]) {
+    baseX = LAYOUT_CONFIG.TOOL_RESULT_COLUMNS[toolId]
+  }
+  
+  // Find all nodes in the same column (similar X position)
+  const nodesInColumn = nodes.filter(n => {
+    const xDiff = Math.abs(n.position.x - baseX)
+    return xDiff < LAYOUT_CONFIG.HORIZONTAL_SPACING / 2
+  })
+  
+  // If no nodes in this column, start at top
+  if (nodesInColumn.length === 0) {
+    return { x: baseX, y: 50 }
+  }
+  
+  // Find the lowest Y position in this column
+  const occupiedYPositions = nodesInColumn.map(n => n.position.y)
+  const maxY = Math.max(...occupiedYPositions)
+  
+  // Place new node below the lowest one with spacing
+  return {
+    x: baseX,
+    y: maxY + LAYOUT_CONFIG.VERTICAL_SPACING
+  }
+}
 
 export const useMotegaoController = (projectId) => {
   const { showError, showInfo } = useModal()
@@ -127,47 +173,38 @@ export const useMotegaoController = (projectId) => {
 
     const newDomainId = Date.now()
     const domainNodeId = `domain-${newDomainId}`
-    const yPosition = domains.length * 200
 
-    // Create new domain node
-    const newNode = {
-      id: domainNodeId,
-      type: "input",
-      data: {
-        label: `🎯 ${subdomain}`,
-        domainId: newDomainId,
-        domainName: subdomain
-      },
-      position: { x: NODE_POSITIONS.DOMAIN.x, y: yPosition },
-      style: NODE_STYLES.DOMAIN,
-    }
+    // Update all states together to avoid duplicate updates
+    setNodes(currentNodes => {
+      const position = calculateDynamicPosition(currentNodes, 'domain')
+
+      // Create new domain node
+      const newNode = {
+        id: domainNodeId,
+        type: "input",
+        data: {
+          label: `🎯 ${subdomain}`,
+          domainId: newDomainId,
+          domainName: subdomain
+        },
+        position,
+        style: NODE_STYLES.DOMAIN,
+      }
+
+      return [...currentNodes, newNode]
+    })
 
     // Create edge from subdomain result node to new domain node
-    const edgeToNewDomain = {
+    setEdges(prev => [...prev, {
       id: `e-${sourceNodeId}-${domainNodeId}`,
       source: sourceNodeId,
       target: domainNodeId,
       animated: true,
       style: EDGE_STYLES.DEFAULT
-    }
-
-    // // Create edge from new domain node back to subdomain result node
-    // const edgeFromNewDomain = {
-    //   id: `e-${domainNodeId}-${sourceNodeId}`,
-    //   source: domainNodeId,
-    //   target: sourceNodeId,
-    //   animated: true,
-    //   style: EDGE_STYLES.SUCCESS
-    // }
+    }])
 
     // Update domains list
     setDomains(prev => [...prev, { id: newDomainId, name: subdomain, status: "active" }])
-
-    // Update nodes
-    setNodes(prev => [...prev, newNode])
-    
-    // Update edges
-    setEdges(prev => [...prev, edgeToNewDomain])
 
     // Save to database
     setTimeout(() => {
@@ -525,7 +562,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.NMAP, // Will be updated in setNodes
+          position: { x: 0, y: 0 }, // Will be calculated dynamically
           style: NODE_STYLES.ERROR,
         }
       } else {
@@ -556,7 +593,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.NMAP, // Will be updated in setNodes
+          position: { x: 0, y: 0 }, // Will be calculated dynamically
           style: { ...NODE_STYLES.RESULT, width: 200 },
         }
       }
@@ -630,7 +667,7 @@ export const useMotegaoController = (projectId) => {
             </div>
           ),
         },
-        position: NODE_POSITIONS.SUBDOMAIN, // Will be updated in setNodes
+        position: { x: 0, y: 0 }, // Will be calculated dynamically
         style: { ...NODE_STYLES.RESULT, width: 280 },
       }
 
@@ -664,7 +701,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.SUBDOMAIN, // Will be updated in setNodes
+          position: { x: 0, y: 0 }, // Will be calculated dynamically
           style: NODE_STYLES.ERROR,
         }
       } else {
@@ -713,7 +750,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.SUBDOMAIN, // Will be updated in setNodes
+          position: { x: 0, y: 0 }, // Will be calculated dynamically
           style: { ...NODE_STYLES.RESULT, width: 300 },
         }
       }
@@ -730,18 +767,16 @@ export const useMotegaoController = (projectId) => {
 
     if (newNode) {
       setNodes(prev => {
-        // Calculate dynamic position based on existing nodes of same type
-        const nodeType = newNode.id.split('-')[0] // 'nmap', 'subdomain', or 'pathfinder'
-        const existingNodesOfType = prev.filter(n => n.id.startsWith(`${nodeType}-`))
-        const yOffset = existingNodesOfType.length * 250
+        // Determine tool type from node ID
+        const toolType = newNode.id.split('-')[0] // 'nmap', 'subdomain', or 'pathfinder'
         
-        // Update position with calculated offset
+        // Calculate dynamic position to prevent overlap
+        const position = calculateDynamicPosition(prev, 'tool', toolType)
+        
+        // Update node with calculated position
         const nodeWithPosition = {
           ...newNode,
-          position: {
-            x: newNode.position.x,
-            y: newNode.position.y + yOffset
-          }
+          position
         }
         
         return [...prev, nodeWithPosition]
@@ -774,39 +809,40 @@ export const useMotegaoController = (projectId) => {
 
     const newDomainId = Date.now();
     const domainNodeId = `domain-${newDomainId}`;
-    const yPosition = domains.length * 200;
 
-    // 1. สร้าง Object ของ Node ใหม่เตรียมไว้ตัวเดียว
-    const newNode = {
-      id: domainNodeId,
-      type: "input",
-      data: {
-        label: `🎯 ${newDomainInput.trim()}`,
-        domainId: newDomainId,
-        domainName: newDomainInput.trim()
-      },
-      position: { x: NODE_POSITIONS.DOMAIN.x, y: yPosition },
-      style: NODE_STYLES.DOMAIN,
-    };
-
-    // 2. อัปเดต Domains List
-    setDomains(prev => [...prev, { id: newDomainId, name: newDomainInput.trim(), status: "active" }]);
-
-    // 3. อัปเดต Nodes และสั่ง Save ในที่เดียว
     setNodes(prev => {
+      // Calculate dynamic position based on existing domain nodes
+      const position = calculateDynamicPosition(prev, 'domain');
+
+      // Create new domain node with dynamic position
+      const newNode = {
+        id: domainNodeId,
+        type: "input",
+        data: {
+          label: `🎯 ${newDomainInput.trim()}`,
+          domainId: newDomainId,
+          domainName: newDomainInput.trim()
+        },
+        position,
+        style: NODE_STYLES.DOMAIN,
+      };
+
       const updatedNodes = [...prev, newNode];
 
-      // 🚀 สั่งเซฟลง Database ทันทีโดยใช้ค่าล่าสุดที่เพิ่งรวมเสร็จ
+      // Save to database with updated nodes
       saveToDatabase(updatedNodes, edges);
 
       return updatedNodes;
     });
 
-    // 4. ล้างค่า Input และปิด Modal
+    // Update domains list
+    setDomains(prev => [...prev, { id: newDomainId, name: newDomainInput.trim(), status: "active" }]);
+
+    // Reset input and close modal
     setNewDomainInput("");
     setShowDomainModal(false);
 
-  }, [newDomainInput, domains.length, edges, saveToDatabase]); // ✅ ถอด nodes ออกจาก dependency เพื่อลดการรันซ้ำโดยไม่จำเป็น
+  }, [newDomainInput, edges, saveToDatabase]);
 
   const handleSelectDomain = useCallback((domain) => {
     setSelectedDomain(domain)

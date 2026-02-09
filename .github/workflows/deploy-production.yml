@@ -25,7 +25,6 @@ jobs:
 
   deploy-workers:
     runs-on: ubuntu-latest
-    environment: production
     strategy:
       matrix:
         worker_ip: ${{ fromJson(vars.WORKER_IPS) }}

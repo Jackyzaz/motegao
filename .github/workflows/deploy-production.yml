@@ -42,7 +42,5 @@ jobs:
           port: 22
           script: |
             ssh -o StrictHostKeyChecking=no dev@${{ matrix.worker_ip }} << 'ENDSSH'
-              cd ~/motegao
-              git pull origin main
-              docker compose -f docker-compose.production.yml up -d --build worker
+              ./deploy-worker.sh up -d --build
             ENDSSH

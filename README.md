@@ -2,6 +2,8 @@
 
 A distributed security reconnaissance platform that visualizes attack surface discovery through an interactive graph-based interface.
 
+<img width="1920" height="1100" alt="Screenshot From 2026-02-09 20-16-03" src="https://github.com/user-attachments/assets/dd3d360d-161d-493f-922a-e5cf681b35d3" />
+
 ## 🎯 What is Motegao?
 
 Motegao is a scalable web application designed for security professionals to perform automated reconnaissance on target domains. It provides a visual, node-based workflow where you can execute multiple security scanning tools and see results in real-time on an interactive canvas.

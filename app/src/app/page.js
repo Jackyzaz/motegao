@@ -3,10 +3,6 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 
-import Topbar from "@/app/components/Topbar"
-import Canvas from "@/app/components/Canvas"
-import Tools from "@/app/components/Tools"
-
 export default function Home() {
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -27,26 +23,14 @@ export default function Home() {
         alignItems: "center", 
         justifyContent: "center", 
         backgroundColor: "#222831", 
-        color: "#76ABAE" 
+        color: "#76ABAE",
+        fontSize: "18px"
       }}>
         INITIALIZING SECURE SESSION...
       </div>
     )
   }
 
-  return (
-    <div style={{ 
-      height: "100vh", 
-      display: "flex", 
-      flexDirection: "column",
-      backgroundColor: "#222831", 
-      color: "#EEEEEE" 
-    }}>
-      <Topbar />
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        <Canvas />
-        <Tools />
-      </div>
-    </div>
-  )
+  // Don't render anything while redirecting
+  return null
 }

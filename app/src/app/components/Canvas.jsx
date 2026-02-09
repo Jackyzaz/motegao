@@ -58,8 +58,8 @@ const nodeTypes = {
 }
 
 export default function Canvas({ 
-  nodes, 
-  edges, 
+  nodes = [], 
+  edges = [], 
   onNodesChange, 
   onEdgesChange, 
   onNodeClick, 

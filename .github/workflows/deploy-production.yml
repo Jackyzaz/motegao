@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        worker_ip: ["10.148.0.5", "10.148.0.6"]
+        worker_ip: ["10.148.0.5", "10.148.0.6", "10.148.0.7", "10.148.0.8"]
       fail-fast: false
       max-parallel: 10
 

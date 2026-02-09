@@ -46,6 +46,115 @@ export const useMotegaoController = (projectId) => {
     []
   )
 
+  const saveToDatabase = useCallback(async (currentNodes, currentEdges) => {
+    if (!projectId) return;
+    try {
+      setSaveStatus("saving");
+      
+      // Helper to check if value is a React element
+      const isReactElement = (obj) => {
+        return obj && typeof obj === 'object' && 
+               (obj.$$typeof || (obj.type && obj.props && (obj._owner !== undefined || obj._store !== undefined)));
+      };
+      
+      // Clean nodes before saving - remove React elements and keep only serializable data
+      const cleanNodes = currentNodes.map(node => {
+        const cleanNode = { 
+          id: node.id,
+          type: node.type,
+          position: node.position,
+          style: node.style,
+          width: node.width,
+          height: node.height,
+          selected: node.selected,
+          dragging: node.dragging,
+          data: {}
+        };
+        
+        // Handle node data
+        if (node.data) {
+          // Copy all properties except React elements
+          Object.keys(node.data).forEach(key => {
+            const value = node.data[key];
+            
+            // Skip React elements
+            if (isReactElement(value)) {
+              return;
+            }
+            
+            // Skip functions
+            if (typeof value === 'function') {
+              return;
+            }
+            
+            // Copy everything else (primitives, arrays, plain objects)
+            cleanNode.data[key] = value;
+          });
+          
+          // For domain nodes, ensure we have the essential data
+          if (node.id.startsWith('domain-')) {
+            cleanNode.data.domainId = node.data.domainId;
+            cleanNode.data.domainName = node.data.domainName;
+            cleanNode.data.label = `🎯 ${node.data.domainName}`;
+          }
+        }
+        
+        return cleanNode;
+      });
+      
+      await api.put(`/projects/update/${projectId}`, {
+        nodes: cleanNodes,
+        edges: currentEdges,
+        lastModified: new Date().toISOString()
+      });
+      console.log("DATABASE_SYNCHRONIZED");
+      setSaveStatus("saved");
+    } catch (error) {
+      console.error("AUTO_SAVE_ERROR:", error);
+      setSaveStatus("unsaved");
+      showError("Failed to save project");
+    }
+  }, [projectId, showError]);
+
+  // Handle clicking on a subdomain to add it as a new domain node
+  const handleSubdomainClick = useCallback((subdomain) => {
+    // Check if this subdomain already exists as a domain
+    const existingDomain = domains.find(d => d.name === subdomain)
+    if (existingDomain) {
+      showInfo(`${subdomain} already exists as a domain`)
+      return
+    }
+
+    const newDomainId = Date.now()
+    const domainNodeId = `domain-${newDomainId}`
+    const yPosition = domains.length * 200
+
+    // Create new domain node
+    const newNode = {
+      id: domainNodeId,
+      type: "input",
+      data: {
+        label: `🎯 ${subdomain}`,
+        domainId: newDomainId,
+        domainName: subdomain
+      },
+      position: { x: NODE_POSITIONS.DOMAIN.x, y: yPosition },
+      style: NODE_STYLES.DOMAIN,
+    }
+
+    // Update domains list
+    setDomains(prev => [...prev, { id: newDomainId, name: subdomain, status: "active" }])
+
+    // Update nodes and save
+    setNodes(prev => {
+      const updatedNodes = [...prev, newNode]
+      saveToDatabase(updatedNodes, edges)
+      return updatedNodes
+    })
+
+    showInfo(`Added ${subdomain} as a new domain`)
+  }, [domains, edges, saveToDatabase, showInfo])
+
   // ----
   useEffect(() => {
     const loadProjectData = async () => {
@@ -90,12 +199,31 @@ export const useMotegaoController = (projectId) => {
                         }}>
                           <thead>
                             <tr style={{ borderBottom: "1px solid #76ABAE" }}>
-                              <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Subdomain</th>
+                              <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>
+                                Subdomain (click to add)
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             {subdomains.map((subdomain, i) => (
-                              <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                              <tr 
+                                key={i} 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSubdomainClick(subdomain)
+                                }}
+                                style={{ 
+                                  borderBottom: "1px solid #31363F",
+                                  cursor: "pointer",
+                                  transition: "background-color 0.2s"
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = "#31363F"
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = "transparent"
+                                }}
+                              >
                                 <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
                                   {subdomain}
                                 </td>
@@ -255,76 +383,6 @@ export const useMotegaoController = (projectId) => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, []) // Empty dependency - uses ref which always has latest value
 
-  const saveToDatabase = useCallback(async (currentNodes, currentEdges) => {
-    if (!projectId) return;
-    try {
-      setSaveStatus("saving");
-      
-      // Helper to check if value is a React element
-      const isReactElement = (obj) => {
-        return obj && typeof obj === 'object' && 
-               (obj.$$typeof || (obj.type && obj.props && (obj._owner !== undefined || obj._store !== undefined)));
-      };
-      
-      // Clean nodes before saving - remove React elements and keep only serializable data
-      const cleanNodes = currentNodes.map(node => {
-        const cleanNode = { 
-          id: node.id,
-          type: node.type,
-          position: node.position,
-          style: node.style,
-          width: node.width,
-          height: node.height,
-          selected: node.selected,
-          dragging: node.dragging,
-          data: {}
-        };
-        
-        // Handle node data
-        if (node.data) {
-          // Copy all properties except React elements
-          Object.keys(node.data).forEach(key => {
-            const value = node.data[key];
-            
-            // Skip React elements
-            if (isReactElement(value)) {
-              return;
-            }
-            
-            // Skip functions
-            if (typeof value === 'function') {
-              return;
-            }
-            
-            // Copy everything else (primitives, arrays, plain objects)
-            cleanNode.data[key] = value;
-          });
-          
-          // For domain nodes, ensure we have the essential data
-          if (node.id.startsWith('domain-')) {
-            cleanNode.data.domainId = node.data.domainId;
-            cleanNode.data.domainName = node.data.domainName;
-            cleanNode.data.label = `🎯 ${node.data.domainName}`;
-          }
-        }
-        
-        return cleanNode;
-      });
-      
-      await api.put(`/projects/update/${projectId}`, {
-        nodes: cleanNodes,
-        edges: currentEdges,
-        lastModified: new Date().toISOString()
-      });
-      console.log("DATABASE_SYNCHRONIZED");
-      setSaveStatus("saved");
-    } catch (error) {
-      console.error("AUTO_SAVE_ERROR:", error);
-      setSaveStatus("unsaved");
-      showError("Failed to save project");
-    }
-  }, [projectId, showError]);
-
   // Poll for task results
   useEffect(() => {
     const activeTasks = Object.entries(runningTasks).filter(
@@ -408,7 +466,7 @@ export const useMotegaoController = (projectId) => {
   }, []) // Empty dependency array - only runs on mount/unmount
 
   // Update graph nodes with scan results
-  const updateNodesWithResults = useCallback((toolId, result) => {
+  const updateNodesWithResults = useCallback((toolId, result, onSubdomainClick) => {
     console.log(`Results for ${toolId}:`, result)
 
     setScanResults({
@@ -493,6 +551,7 @@ export const useMotegaoController = (projectId) => {
           toolType: 'subdomain',
           subdomains: subdomains,
           rawResult: result,
+          onSubdomainClick: handleSubdomainClick,
           label: (
             <div style={{ textAlign: "left", fontSize: "11px" }}>
               <b style={{ color: "#76ABAE", display: "block", marginBottom: "8px" }}>Subdomains Found ({subdomains.length})</b>
@@ -505,12 +564,31 @@ export const useMotegaoController = (projectId) => {
                 }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid #76ABAE" }}>
-                      <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>Subdomain</th>
+                      <th style={{ padding: "4px", textAlign: "left", color: "#76ABAE", fontWeight: "bold" }}>
+                        Subdomain (click to add)
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {subdomains.map((subdomain, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid #31363F" }}>
+                      <tr 
+                        key={i} 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleSubdomainClick(subdomain)
+                        }}
+                        style={{ 
+                          borderBottom: "1px solid #31363F",
+                          cursor: "pointer",
+                          transition: "background-color 0.2s"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "#31363F"
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent"
+                        }}
+                      >
                         <td style={{ padding: "4px", textAlign: "left", color: "#50fa7b", wordBreak: "break-word" }}>
                           {subdomain}
                         </td>
@@ -877,6 +955,7 @@ export const useMotegaoController = (projectId) => {
     onNodesChange,
     onEdgesChange,
     handleNodeClick,
+    handleSubdomainClick,
 
     // Domain handlers
     handleAddDomain,

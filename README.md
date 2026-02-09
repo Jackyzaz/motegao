@@ -39,7 +39,7 @@ Motegao is a scalable web application designed for security professionals to per
                     │
          ┌──────────▼──────────┐
          │  Celery Workers     │
-         │  (10.148.0.5-58)   │
+         │  (10.148.0.5-58)    │
          │  - nmap             │
          │  - gobuster         │
          │  - DNS enumeration  │

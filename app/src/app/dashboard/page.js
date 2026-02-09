@@ -152,12 +152,12 @@ export default function Dashboard() {
 
       <div style={{ display: "flex", height: "calc(100vh - 60px)" }}>
         {/* Sidebar */}
-        <div style={{ width: "240px", borderRight: "1px solid #31363F", padding: "20px", color: "#EEEEEE", }}>
+        {/* <div style={{ width: "240px", borderRight: "1px solid #31363F", padding: "20px", color: "#EEEEEE", }}>
           <div style={{ marginBottom: "30px", fontSize: "12px", color: "#76ABAE", fontWeight: "bold" }}>SYSTEM MENU</div>
           <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE",flexDirection: "row", display: "flex",fontSize: "15px", gap: "4px",color: "#A7DADC",}}> <House size={24} style={{ position: "relative", bottom: "3px" }}/> <span>Home</span></div>
           <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE" ,flexDirection: "row", display: "flex",fontSize: "15px", gap: "4px",}}><Folder size={23} style={{ position: "relative", bottom: "3px" }}/> My Operations</div>
           <div style={{ marginBottom: "15px", cursor: "pointer", color: "#76ABAE",flexDirection: "row", display: "flex",fontSize: "15px", gap: "4px",}}><Gear size={23} style={{ position: "relative", bottom: "3px" }}/> Settings</div>
-        </div>
+        </div> */}
 
         {/* Content */}
         <div style={{ flex: 1, padding: "40px", overflowY: "auto" }}>

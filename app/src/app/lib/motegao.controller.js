@@ -708,9 +708,25 @@ export const useMotegaoController = (projectId) => {
     }
   }, [selectedDomain])
 
+  const isDomainOnCanvas = useCallback((domainName) => {
+    const normalized = domainName.trim().toLowerCase()
+
+    return nodes.some(node =>
+      node.id.startsWith("domain-") &&
+      node.data?.domainName?.toLowerCase() === normalized
+    )
+  }, [nodes])
+
   // Domain handlers
   const handleAddDomain = useCallback(() => {
-    if (!newDomainInput.trim()) return;
+    const domain = newDomainInput.trim()
+    if (!domain) return
+
+    // 🚫 DUPLICATE CHECK (canvas-based)
+    if (isDomainOnCanvas(domain)) {
+      showInfo(`Domain "${domain}" already exists on canvas`)
+      return
+    }
 
     const newDomainId = Date.now();
     const domainNodeId = `domain-${newDomainId}`;

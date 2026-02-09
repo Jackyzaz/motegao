@@ -117,7 +117,7 @@ export const useMotegaoController = (projectId) => {
   }, [projectId, showError]);
 
   // Handle clicking on a subdomain to add it as a new domain node
-  const handleSubdomainClick = useCallback((subdomain) => {
+  const handleSubdomainClick = useCallback((subdomain, sourceNodeId) => {
     // Check if this subdomain already exists as a domain
     const existingDomain = domains.find(d => d.name === subdomain)
     if (existingDomain) {
@@ -142,18 +142,46 @@ export const useMotegaoController = (projectId) => {
       style: NODE_STYLES.DOMAIN,
     }
 
+    // Create edge from subdomain result node to new domain node
+    const edgeToNewDomain = {
+      id: `e-${sourceNodeId}-${domainNodeId}`,
+      source: sourceNodeId,
+      target: domainNodeId,
+      animated: true,
+      style: EDGE_STYLES.DEFAULT
+    }
+
+    // // Create edge from new domain node back to subdomain result node
+    // const edgeFromNewDomain = {
+    //   id: `e-${domainNodeId}-${sourceNodeId}`,
+    //   source: domainNodeId,
+    //   target: sourceNodeId,
+    //   animated: true,
+    //   style: EDGE_STYLES.SUCCESS
+    // }
+
     // Update domains list
     setDomains(prev => [...prev, { id: newDomainId, name: subdomain, status: "active" }])
 
-    // Update nodes and save
-    setNodes(prev => {
-      const updatedNodes = [...prev, newNode]
-      saveToDatabase(updatedNodes, edges)
-      return updatedNodes
-    })
+    // Update nodes
+    setNodes(prev => [...prev, newNode])
+    
+    // Update edges
+    setEdges(prev => [...prev, edgeToNewDomain])
+
+    // Save to database
+    setTimeout(() => {
+      setNodes(currentNodes => {
+        setEdges(currentEdges => {
+          saveToDatabase(currentNodes, currentEdges)
+          return currentEdges
+        })
+        return currentNodes
+      })
+    }, 0)
 
     showInfo(`Added ${subdomain} as a new domain`)
-  }, [domains, edges, saveToDatabase, showInfo])
+  }, [domains, saveToDatabase, showInfo])
 
   // ----
   useEffect(() => {
@@ -210,7 +238,7 @@ export const useMotegaoController = (projectId) => {
                                 key={i} 
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleSubdomainClick(subdomain)
+                                  handleSubdomainClick(subdomain, cleanNode.id)
                                 }}
                                 style={{ 
                                   borderBottom: "1px solid #31363F",
@@ -497,7 +525,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.NMAP,
+          position: NODE_POSITIONS.NMAP, // Will be updated in setNodes
           style: NODE_STYLES.ERROR,
         }
       } else {
@@ -528,7 +556,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.NMAP,
+          position: NODE_POSITIONS.NMAP, // Will be updated in setNodes
           style: { ...NODE_STYLES.RESULT, width: 200 },
         }
       }
@@ -575,7 +603,7 @@ export const useMotegaoController = (projectId) => {
                         key={i} 
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleSubdomainClick(subdomain)
+                          handleSubdomainClick(subdomain, nodeId)
                         }}
                         style={{ 
                           borderBottom: "1px solid #31363F",
@@ -602,7 +630,7 @@ export const useMotegaoController = (projectId) => {
             </div>
           ),
         },
-        position: NODE_POSITIONS.SUBDOMAIN,
+        position: NODE_POSITIONS.SUBDOMAIN, // Will be updated in setNodes
         style: { ...NODE_STYLES.RESULT, width: 280 },
       }
 
@@ -636,7 +664,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.SUBDOMAIN,
+          position: NODE_POSITIONS.SUBDOMAIN, // Will be updated in setNodes
           style: NODE_STYLES.ERROR,
         }
       } else {
@@ -685,7 +713,7 @@ export const useMotegaoController = (projectId) => {
               </div>
             ),
           },
-          position: NODE_POSITIONS.SUBDOMAIN,
+          position: NODE_POSITIONS.SUBDOMAIN, // Will be updated in setNodes
           style: { ...NODE_STYLES.RESULT, width: 300 },
         }
       }
@@ -701,7 +729,23 @@ export const useMotegaoController = (projectId) => {
     }
 
     if (newNode) {
-      setNodes(prev => [...prev, newNode])
+      setNodes(prev => {
+        // Calculate dynamic position based on existing nodes of same type
+        const nodeType = newNode.id.split('-')[0] // 'nmap', 'subdomain', or 'pathfinder'
+        const existingNodesOfType = prev.filter(n => n.id.startsWith(`${nodeType}-`))
+        const yOffset = existingNodesOfType.length * 250
+        
+        // Update position with calculated offset
+        const nodeWithPosition = {
+          ...newNode,
+          position: {
+            x: newNode.position.x,
+            y: newNode.position.y + yOffset
+          }
+        }
+        
+        return [...prev, nodeWithPosition]
+      })
     }
     if (newEdge) {
       setEdges(prev => [...prev, newEdge])
